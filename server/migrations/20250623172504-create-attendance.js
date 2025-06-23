@@ -10,10 +10,17 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       employeeId: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Employees', // Exact table name
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       date: {
-        type: Sequelize.DATE
+        type: Sequelize.DATEONLY
       },
       timeIn: {
         type: Sequelize.TIME
@@ -21,11 +28,11 @@ module.exports = {
       timeOut: {
         type: Sequelize.TIME
       },
-      late: {
-        type: Sequelize.BOOLEAN
+      status: {
+        type: Sequelize.STRING
       },
-      undertime: {
-        type: Sequelize.BOOLEAN
+      lateMinutes: {
+        type: Sequelize.INTEGER
       },
       createdAt: {
         allowNull: false,

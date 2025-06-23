@@ -10,8 +10,8 @@ const leaveRoutes = require('./routes/leaveRoutes');
 app.use(express.json());
 
 app.use('/api/employees', employeeRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/payroll', payrollRoutes);
+app.use('/api/attendances', attendanceRoutes);
+app.use('/api/payrolls', payrollRoutes);
 app.use('/api/leave', leaveRoutes);
 
 app.listen(port, () => {

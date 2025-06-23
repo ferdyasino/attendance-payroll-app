@@ -1,4 +1,5 @@
-const { Employee } = require('../models');
+const { Employee, Attendance, Payroll } = require('../models');
+
 
 exports.getAllEmployees = async (req, res) => {
   try {
@@ -65,6 +66,19 @@ exports.deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Check Attendance
+    const attendance = await Attendance.findOne({ where: { employeeId: id } });
+    if (attendance) {
+      return res.status(400).json({ message: 'Cannot delete: Employee has attendance records.' });
+    }
+
+    // Check Payroll
+    const payroll = await Payroll.findOne({ where: { employeeId: id } });
+    if (payroll) {
+      return res.status(400).json({ message: 'Cannot delete: Employee has payroll records.' });
+    }
+
+    // If safe, delete
     const deleted = await Employee.destroy({
       where: { id: id }
     });
@@ -74,7 +88,9 @@ exports.deleteEmployee = async (req, res) => {
     } else {
       res.status(404).json({ message: 'Employee not found' });
     }
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+

@@ -15,11 +15,11 @@ module.exports = (sequelize, DataTypes) => {
   }
   Attendance.init({
     employeeId: DataTypes.INTEGER,
-    date: DataTypes.DATE,
+    date: DataTypes.DATEONLY,
     timeIn: DataTypes.TIME,
     timeOut: DataTypes.TIME,
-    late: DataTypes.BOOLEAN,
-    undertime: DataTypes.BOOLEAN
+    status: DataTypes.STRING,
+    lateMinutes: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Attendance',
