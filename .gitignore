@@ -1,34 +1,88 @@
+# ========================
 # Node.js dependencies
+# ========================
 node_modules/
 
+# ========================
 # Logs
-logs
+# ========================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
+# ========================
 # Environment variables
+# ========================
 .env
 .env.* # e.g., .env.local, .env.production
 
-# OS files
+# ========================
+# OS-specific files
+# ========================
 .DS_Store
 Thumbs.db
 
-# IDE/Editor folders
+# ========================
+# Editor & IDE folders
+# ========================
 .idea/
 .vscode/
-
-# Build output
-/dist
-/build
-
-# React build
-client/build
-
-# MySQL dumps
-*.sql
-
-# Misc
 *.swp
+
+# ========================
+# Build outputs
+# ========================
+dist/
+build/
+
+# ========================
+# React frontend
+# ========================
+client/build/
+
+# ========================
+# Flutter project (if applicable)
+# ========================
+flutter_*.png
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+.pub-cache/
+build/
+generated_plugin_registrant.dart
+
+# Android/iOS specific
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+
+# ========================
+# MySQL or DB dumps
+# ========================
+*.sql
+*.sqlite
+*.db
+
+# ========================
+# Coverage & testing
+# ========================
+coverage/
+.nyc_output/
+jest-cache/
+jest-coverage/
+
+# ========================
+# Misc
+# ========================
+*.tgz
+*.bak
+*.tmp
+*.pid

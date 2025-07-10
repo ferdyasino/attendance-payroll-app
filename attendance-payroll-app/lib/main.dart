@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_page.dart'; // Home page of the app
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MyApp()); // ✅ Start with MyApp
 }
 
 class MyApp extends StatelessWidget {
@@ -11,13 +11,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // removes the debug banner
+      debugShowCheckedModeBanner: false,
       title: 'Attendance App',
       theme: ThemeData(
-        primarySwatch: Colors.blue, // overall theme color
+        primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const HomePage(), // starts at home page
+      home: const HomePage(), // 📍 Home screen
     );
   }
 }
