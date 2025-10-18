@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 
@@ -19,20 +19,20 @@ class AuthProvider with ChangeNotifier {
   // Clear error
   void clearError() {
     _error = null;
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   // Set loading state
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   // Set error
   void _setError(String error) {
     _error = error;
     _isLoading = false;
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   // Set user
@@ -40,7 +40,20 @@ class AuthProvider with ChangeNotifier {
     _currentUser = user;
     _isLoading = false;
     _error = null;
-    notifyListeners();
+    _notifyListenersSafely();
+  }
+
+  // Notify listeners safely: if called during build, defer to post frame.
+  void _notifyListenersSafely() {
+    final binding = WidgetsBinding.instance;
+    // Defer all notifications to the next frame to guarantee we never call
+    // notifyListeners during the widget build phase. This avoids the
+    // "setState() or markNeedsBuild() called during build" FlutterError.
+    binding.addPostFrameCallback((_) {
+      try {
+        notifyListeners();
+      } catch (_) {}
+    });
   }
 
   // Login user

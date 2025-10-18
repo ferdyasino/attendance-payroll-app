@@ -43,3 +43,30 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# VS Code
+.vscode/
+
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+
+# Local settings
+.idea/
+*.iml
+
+# Logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+
+# Generated files
+pubspec.lock
