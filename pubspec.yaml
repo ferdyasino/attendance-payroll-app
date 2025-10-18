@@ -38,7 +38,7 @@ dependencies:
   provider: ^6.1.5+1
   http: ^1.5.0
   flutter_secure_storage: ^9.2.4
-  intl: ^0.19.0
+  intl: ^0.20.2
   shared_preferences: ^2.2.2
 
 dev_dependencies:
@@ -50,7 +50,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -93,3 +93,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+dependency_overrides:
+  meta: ^1.17.0
+  characters: ^1.4.1
+  material_color_utilities: ^0.13.0
+  test_api: ^0.7.7
+  js: ^0.7.2   # even though discontinued, this unlocks null-safety
+  flutter_secure_storage_platform_interface: ^2.0.1
+  flutter_secure_storage_linux: ^2.0.1
+  flutter_secure_storage_macos: ^4.0.0
+  flutter_secure_storage_windows: ^4.0.0
+  flutter_secure_storage_web: ^2.0.0
