@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/payroll_provider.dart';
+import 'providers/attendance_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/debug_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/reports_screen.dart';
+import 'screens/employees_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +25,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PayrollProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
       ],
       child: MaterialApp(
         title: 'Attendance & Payroll',
@@ -40,7 +44,9 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/dashboard': (context) => const DashboardScreen(),
+          '/reports': (context) => const ReportsScreen(),
           '/debug': (context) => const DebugScreen(),
+          '/employees': (context) => const EmployeesScreen(),
         },
       ),
     );

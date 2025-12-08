@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/attendance_page.dart';
 import '../screens/home_page.dart';
+import '../screens/reports_screen.dart';
+import '../screens/payroll_summary_screen.dart';
+import '../screens/payroll_history_screen.dart';
+import '../screens/employees_screen.dart'; // <-- New screen import
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -68,7 +72,7 @@ class DashboardScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         colors: [
                           Theme.of(context).primaryColor,
-                          Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                          Theme.of(context).primaryColor.withOpacity(0.8),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -81,7 +85,7 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 30,
-                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              backgroundColor: Colors.white.withOpacity(0.2),
                               child: const Icon(
                                 Icons.person,
                                 size: 30,
@@ -96,7 +100,7 @@ class DashboardScreen extends StatelessWidget {
                                   Text(
                                     'Welcome back,',
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withOpacity(0.9),
                                       fontSize: 16,
                                     ),
                                   ),
@@ -120,7 +124,7 @@ class DashboardScreen extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -147,7 +151,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Action Cards
+                // Action Cards Grid
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -156,7 +160,6 @@ class DashboardScreen extends StatelessWidget {
                   mainAxisSpacing: 16,
                   childAspectRatio: 1.2,
                   children: [
-                    // Attendance Card
                     _buildActionCard(
                       context,
                       title: 'Attendance',
@@ -171,8 +174,6 @@ class DashboardScreen extends StatelessWidget {
                         );
                       },
                     ),
-
-                    // Time Tracking Card
                     _buildActionCard(
                       context,
                       title: 'Time In/Out',
@@ -187,8 +188,6 @@ class DashboardScreen extends StatelessWidget {
                         );
                       },
                     ),
-
-                    // Profile Card
                     _buildActionCard(
                       context,
                       title: 'Profile',
@@ -199,22 +198,64 @@ class DashboardScreen extends StatelessWidget {
                         _showProfileDialog(context, user);
                       },
                     ),
-
-                    // Settings Card
                     _buildActionCard(
                       context,
-                      title: 'Settings',
-                      subtitle: 'App settings',
-                      icon: Icons.settings,
-                      color: Colors.purple,
+                      title: 'Reports',
+                      subtitle: 'View reports',
+                      icon: Icons.description,
+                      color: Colors.teal,
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Settings coming soon!'),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ReportsScreen(),
                           ),
                         );
                       },
                     ),
+                    _buildActionCard(
+                      context,
+                      title: 'Employees',
+                      subtitle: 'View attendance',
+                      icon: Icons.group,
+                      color: Colors.purple,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const EmployeesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    if (authProvider.isAdmin || authProvider.isSuperAdmin)
+                      _buildActionCard(
+                        context,
+                        title: 'Payroll Summary',
+                        subtitle: 'View payroll',
+                        icon: Icons.account_balance_wallet,
+                        color: Colors.indigo,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const PayrollSummaryScreen(),
+                            ),
+                          );
+                        },
+                      )
+                    else
+                      _buildActionCard(
+                        context,
+                        title: 'Payroll History',
+                        subtitle: 'My payroll',
+                        icon: Icons.history,
+                        color: Colors.indigo,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const PayrollHistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -254,6 +295,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  // Action Card Widget
   Widget _buildActionCard(
     BuildContext context, {
     required String title,
@@ -275,11 +317,7 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 40,
-                color: color,
-              ),
+              Icon(icon, size: 40, color: color),
               const SizedBox(height: 8),
               Text(
                 title,
@@ -292,10 +330,7 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -305,6 +340,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  // Info Row Widget
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -315,18 +351,13 @@ class DashboardScreen extends StatelessWidget {
             width: 80,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.grey),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -334,6 +365,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  // Profile Dialog
   void _showProfileDialog(BuildContext context, user) {
     showDialog(
       context: context,
@@ -352,15 +384,13 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
         ],
       ),
     );
   }
 
+  // Logout Dialog
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -368,10 +398,7 @@ class DashboardScreen extends StatelessWidget {
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();

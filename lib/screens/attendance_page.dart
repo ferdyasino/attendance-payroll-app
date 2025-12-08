@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/attendance.dart';
 import '../services/attendance_service.dart';
+import '../widgets/user_attendance_detail_page.dart';
 
 class AttendancePage extends StatefulWidget {
   const AttendancePage({super.key});
@@ -64,18 +65,31 @@ class _AttendancePageState extends State<AttendancePage> {
                   child: ListTile(
                     leading: const Icon(Icons.person, size: 40, color: Colors.black54),
                     title: Text(
-                      'Employee ID: ${record.employeeId}',
+                      'Employee ID: ${record.userId}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
                       'Date: ${record.date}\n'
-                          'Time In: ${record.timeIn}\n'
-                          'Time Out: ${record.timeOut}\n'
-                          'Status: ${record.status}\n'
-                          'Late: ${record.lateMinutes} mins',
+                      'Time In: ${record.timeIn}\n'
+                      'Time Out: ${record.timeOut}\n'
+                      'Status: ${record.status}\n'
+                      'Late: ${record.lateMinutes} mins',
                     ),
+                    onTap: () {
+                        final String name = record.userName.isNotEmpty 
+                            ? record.userName 
+                            : 'Employee ${record.userId}';
 
-                  ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UserAttendanceDetailPage(
+                              userName: name,
+                            ),
+                          ),
+                        );
+                      },
+                     ),
                 );
               },
             );
