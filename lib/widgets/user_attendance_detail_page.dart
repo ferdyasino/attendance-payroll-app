@@ -111,6 +111,7 @@ class _UserAttendanceDetailPageState extends State<UserAttendanceDetailPage> {
               position: "",
               setup: "",
               fullName: widget.userName,
+              email: "",  
               records: [],
             ),
           );

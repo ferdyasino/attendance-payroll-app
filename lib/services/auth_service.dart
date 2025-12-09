@@ -1,141 +1,62 @@
-import '../models/user.dart';
-import '../utils/constants.dart';
-import 'api_service.dart';
+// services/auth_service.dart
+import 'package:google_sign_in/google_sign_in.dart';
+import 'google_sheet_service.dart';
 
 class AuthService {
-  // Login user
-  static Future<User> login(String email, String password) async {
-    try {
-      final response = await ApiService.post(
-        Constants.loginEndpoint,
-        body: {
-          'email': email,
-          'password': password,
-        },
-        includeAuth: false,
-      );
+  // Google Sign-In instance
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  );
 
-      if (response['success'] == true && response['data'] != null) {
-        final data = response['data'];
-        final user = User.fromJson(data['user']);
-        final token = data['token'];
-        
-        // Save token
-        await saveToken(token);
-        
-        // Return user with token
-        return user.copyWith(token: token);
-      } else {
-        throw Exception(response['message'] ?? 'Login failed');
+  // Owner email always allowed
+  static const String ownerEmail = "ferdyasino@gmail.com";
+
+  /// Sign in with Google
+  /// Returns email if authorized, or null if denied
+  static Future<String?> signIn() async {
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) return null;
+
+      final email = account.email.trim().toLowerCase();
+
+      // Owner bypass
+      if (email == ownerEmail.toLowerCase()) return email;
+
+      // Check Google Sheet
+      final sheetService = GoogleSheetService();
+      final allowed = await sheetService.isEmailAllowed(email);
+
+      if (!allowed) {
+        await _googleSignIn.signOut();
+        return null;
       }
+
+      return email;
     } catch (e) {
-      throw Exception('Login failed: $e');
+      print("Google Sign-In error: $e");
+      return null;
     }
   }
 
-  // Register new user
-  static Future<User> register({
-    required String name,
-    required String email,
-    required String password,
-    String role = 'employee',
-    int? companyId,
-  }) async {
-    try {
-      final response = await ApiService.post(
-        Constants.registerEndpoint,
-        body: {
-          'name': name,
-          'email': email,
-          'password': password,
-          'role': role,
-          if (companyId != null) 'companyId': companyId,
-        },
-        includeAuth: false,
-      );
-
-      if (response['success'] == true && response['data'] != null) {
-        final user = User.fromJson(response['data']);
-        return user;
-      } else {
-        throw Exception(response['message'] ?? 'Registration failed');
-      }
-    } catch (e) {
-      throw Exception('Registration failed: $e');
-    }
+  /// Sign out
+  static Future<void> signOut() async {
+    await _googleSignIn.signOut();
   }
 
-  // Get current user profile
-  static Future<User> getProfile() async {
-    try {
-      final response = await ApiService.get(Constants.profileEndpoint);
-      
-      if (response['success'] == true && response['data'] != null) {
-        return User.fromJson(response['data']);
-      } else {
-        throw Exception(response['message'] ?? 'Failed to get profile');
-      }
-    } catch (e) {
-      throw Exception('Failed to get profile: $e');
-    }
+  /// Check if signed in
+  static Future<bool> isSignedIn() async {
+    return _googleSignIn.isSignedIn();
   }
 
-  // Save JWT token
-  static Future<void> saveToken(String token) async {
-    await ApiService.saveToken(token);
+  /// Get current signed-in user's email
+  static String? getCurrentUserEmail() {
+    return _googleSignIn.currentUser?.email;
   }
 
-  // Get stored JWT token
-  static Future<String?> getToken() async {
-    return await ApiService.getToken();
-  }
-
-  // Clear stored token
-  static Future<void> clearToken() async {
-    await ApiService.clearToken();
-  }
-
-  // Check if user is authenticated
-  static Future<bool> isAuthenticated() async {
-    return await ApiService.isAuthenticated();
-  }
-
-  // Logout user
-  static Future<void> logout() async {
-    try {
-      await clearToken();
-    } catch (e) {
-      throw Exception('Logout failed: $e');
-    }
-  }
-
-  // Validate email format
-  static bool isValidEmail(String email) {
-    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-  }
-
-  // Validate password strength
-  static bool isValidPassword(String password) {
-    return password.length >= 6;
-  }
-
-  // Validate name
-  static bool isValidName(String name) {
-    return name.trim().length >= 2;
-  }
-
-  // Get available roles
-  static List<String> getAvailableRoles() {
-    return [
-      Constants.roleEmployee,
-      Constants.roleAdmin,
-      Constants.roleSuperadmin,
-    ];
-  }
-
-  // Check server connectivity
-  static Future<bool> checkServerHealth() async {
-    return await ApiService.checkServerHealth();
+  /// Get current user's role from Google Sheet
+  static Future<String> getUserRole(String email) async {
+    final sheetService = GoogleSheetService();
+    return sheetService.getUserRole(email);
   }
 }
-

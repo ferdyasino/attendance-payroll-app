@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import '../models/employee.dart';
 
 class GoogleSheetService {
-  final String sheetId = '1MILpQV-SM2cjYvqx2IermxhC169gEV0N5yZUGVoC_uU';
-  final String sheetGid = '1146707741';
+  static const String sheetId = "13Z8K2wCRohAhN4tiP_z3yojAZJahOpfqJv_4sJBckw0";
+  static const String attendanceGid = "1669045384"; // Attendance tab
+  static const String usersGid = "1511671582";               // Users tab
 
-  // Helper: convert time string like "9PM-6AM" → { start: "9:00 PM", end: "6:00 AM" }
+  // -------------------------
+  // Parse shifts like "9PM-6AM"
+  // -------------------------
   Map<String, String?> parseShiftTimes(String? shift) {
     if (shift == null || shift.trim().isEmpty) return {'start': null, 'end': null};
-
     final regex = RegExp(r'(\d{1,2}(?::\d{2})?)\s*(AM|PM)?\s*[-–]\s*(\d{1,2}(?::\d{2})?)\s*(AM|PM)?', caseSensitive: false);
     final match = regex.firstMatch(shift);
-
     if (match == null) return {'start': null, 'end': null};
 
     String formatTime(String time, String? period) {
@@ -23,37 +24,104 @@ class GoogleSheetService {
       final p = (period ?? '').toUpperCase();
 
       if (p.isEmpty) {
-        // Assume 24h logic
         final isPM = hour >= 12;
         hour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
         return '$hour:$minute ${isPM ? 'PM' : 'AM'}';
       } else {
         hour = hour == 12 ? 12 : (hour % 12 == 0 ? 12 : hour % 12);
-        return '$hour:$minute ${p}';
+        return '$hour:$minute $p';
       }
     }
 
     final start = formatTime(match.group(1)!, match.group(2));
     final end = formatTime(match.group(3)!, match.group(4));
-
     return {'start': start, 'end': end};
   }
 
-  // Extract actual clock time from text like "POSTSHIFT 7:30 AM" or "LATE 10:15 PM"
   String? extractRealTime(String? text) {
     if (text == null || text.trim().isEmpty) return null;
     final match = RegExp(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', caseSensitive: false).firstMatch(text);
     return match?.group(1);
   }
 
-  Future<List<Employee>> fetchEmployees() async {
-    final url = Uri.parse('https://docs.google.com/spreadsheets/d/$sheetId/gviz/tq?tqx=out:json&gid=$sheetGid');
+  // -------------------------
+  // Fetch user by email (authorization + role)
+  // -------------------------
+  Future<Map<String, dynamic>?> fetchUserByEmail(String email) async {
+    try {
+      final url = Uri.parse(
+        'https://docs.google.com/spreadsheets/d/$sheetId/gviz/tq?tqx=out:json&gid=$usersGid'
+      );
+      final response = await http.get(url);
+      if (response.statusCode != 200) return null;
+
+      final jsonText = response.body.substring(47, response.body.length - 2);
+      final data = jsonDecode(jsonText);
+      final rows = data['table']['rows'] as List<dynamic>;
+
+      for (var row in rows.skip(1)) {
+        final rowEmail = row['c']?[1]?['v']?.toString().trim().toLowerCase();
+        final role = (row['c']?[2]?['v']?.toString() ?? "USER").toUpperCase();
+        print("Comparing input email '$email' with sheet email '$rowEmail'");
+        if (rowEmail == email.toLowerCase()) {
+          print("Email matched! Role: $role");
+          return {'email': rowEmail, 'role': role};
+        }
+      }
+    } catch (e) {
+      print("Error fetching user by email: $e");
+      return null;
+    }
+    print("Email '$email' not found in sheet");
+    return null;
+  }
+
+  // -------------------------
+  // Check if email is allowed
+  // -------------------------
+  Future<bool> isEmailAllowed(String email) async {
+    final user = await fetchUserByEmail(email);
+    return user != null;
+  }
+
+  // -------------------------
+  // Get user role
+  // -------------------------
+  Future<String> getUserRole(String email) async {
+    final user = await fetchUserByEmail(email);
+    return user?['role'] ?? "USER";
+  }
+
+  // -------------------------
+  // Fetch all users (debug helper)
+  // -------------------------
+  Future<List<Map<String, String>>> fetchAllUsers() async {
+    final url = Uri.parse('https://docs.google.com/spreadsheets/d/$sheetId/gviz/tq?tqx=out:json&gid=$usersGid');
     final response = await http.get(url);
+    final List<Map<String, String>> users = [];
+    if (response.statusCode == 200) {
+      final jsonText = response.body.substring(47, response.body.length - 2);
+      final data = jsonDecode(jsonText);
+      final rows = data['table']['rows'] as List<dynamic>;
+      for (var row in rows.skip(1)) {
+        final email = row['c']?[1]?['v']?.toString().trim() ?? "";
+        final role = row['c']?[2]?['v']?.toString().trim() ?? "USER";
+        if (email.isNotEmpty) users.add({'email': email, 'role': role});
+      }
+    }
+    return users;
+  }
 
-    if (response.statusCode != 200) throw Exception('Failed to load sheet');
+  // -------------------------
+  // Fetch attendance/employees
+  // -------------------------
+  Future<List<Employee>> fetchEmployees() async {
+    final url = Uri.parse('https://docs.google.com/spreadsheets/d/$sheetId/gviz/tq?tqx=out:json&gid=$attendanceGid');
+    final response = await http.get(url);
+    if (response.statusCode != 200) throw Exception('Failed to load attendance');
 
-    final String jsonText = response.body.substring(47, response.body.length - 2);
-    final Map<String, dynamic> data = json.decode(jsonText);
+    final jsonText = response.body.substring(47, response.body.length - 2);
+    final Map<String, dynamic> data = jsonDecode(jsonText);
     final List<dynamic> rows = data['table']['rows'];
 
     dynamic get(int r, int c) {
@@ -77,8 +145,8 @@ class GoogleSheetService {
     for (int r = 4; r < rows.length; r++) {
       final colA = get(r, 0);
       final name = get(r, 3);
+      final email = get(r, 1)?.toString().trim() ?? "";
 
-      // Detect department
       if (colA is String && colA.trim().isNotEmpty && name == null) {
         currentDept = colA.trim();
         continue;
@@ -91,9 +159,10 @@ class GoogleSheetService {
       if (!employeeMap.containsKey(key)) {
         employeeMap[key] = Employee(
           department: currentDept,
-          position: (get(r, 1)?.toString() ?? "").trim(),
+          position: (get(r, 2)?.toString() ?? "").trim(),
           setup: (get(r, 2)?.toString() ?? "OFFICE").trim(),
           fullName: fullName,
+          email: email,
           records: [],
         );
       }
@@ -109,12 +178,10 @@ class GoogleSheetService {
         final rawOut = block.containsKey('out') ? get(r, block['out'])?.toString() : null;
         final totalOT = block.containsKey('tot') ? get(r, block['tot'])?.toString() : null;
 
-        // Parse shift start/end times
         final shiftTimes = parseShiftTimes(rawShift);
         final String? shiftStart = shiftTimes['start'];
         final String? shiftEnd = shiftTimes['end'];
 
-        // Resolve actual IN time
         String? inTime;
         if (rawIn != null) {
           final txt = rawIn.trim();
@@ -123,7 +190,6 @@ class GoogleSheetService {
           }
         }
 
-        // Resolve actual OUT time
         String? outTime;
         if (rawOut != null) {
           final txt = rawOut.trim();
@@ -134,14 +200,13 @@ class GoogleSheetService {
           }
         }
 
-        // Only add if there's any data
         if (rawShift != null || inTime != null || outTime != null || totalOT != null) {
           emp.records.add(AttendanceRecord(
             date: date,
             day: day,
             shift: rawShift?.trim(),
-            inTime: inTime,           // ← Now real time or null
-            outTime: outTime,         // ← Now real time or null
+            inTime: inTime,
+            outTime: outTime,
             totalOT: totalOT,
           ));
         }
