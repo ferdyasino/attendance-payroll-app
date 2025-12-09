@@ -72,168 +72,180 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Card
-              Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      colors: [Colors.deepPurple, Colors.deepPurple.shade700],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        child: const Icon(Icons.person, size: 40, color: Colors.white),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Welcome back!",
-                              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _userEmail,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _userRole,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome Card
+                  Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: LinearGradient(
+                          colors: [Colors.deepPurple, Colors.deepPurple.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                       ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            child: const Icon(Icons.person, size: 36, color: Colors.white),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Welcome back!",
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _userEmail,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _userRole,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Quick Actions Title
+                  Text(
+                    "Quick Actions",
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Action Grid
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1,
+                    children: [
+                      _buildActionCard(
+                        context,
+                        title: "Employees",
+                        subtitle: "View all attendance",
+                        icon: Icons.group,
+                        color: Colors.purple,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const EmployeesScreen()),
+                          );
+                        },
+                      ),
+                      _buildActionCard(
+                        context,
+                        title: "My Attendance",
+                        subtitle: "Your time records",
+                        icon: Icons.access_time,
+                        color: Colors.blue,
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Coming soon!")),
+                          );
+                        },
+                      ),
+                      _buildActionCard(
+                        context,
+                        title: "Payroll",
+                        subtitle: "Salary summary",
+                        icon: Icons.account_balance_wallet,
+                        color: Colors.green,
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Payroll module coming soon!")),
+                          );
+                        },
+                      ),
+                      _buildActionCard(
+                        context,
+                        title: "Reports",
+                        subtitle: "Export data",
+                        icon: Icons.bar_chart,
+                        color: Colors.orange,
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Reports coming soon!")),
+                          );
+                        },
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
-              // Quick Actions Title
-              Text(
-                "Quick Actions",
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+                  // Info Card
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "App Info",
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow("Version", "1.0.0"),
+                          _buildInfoRow("Database", "Google Sheets"),
+                          _buildInfoRow("Authentication", "Email / Google Sheet"),
+                          _buildInfoRow("User Email", _userEmail.isEmpty ? "-" : _userEmail),
+                          _buildInfoRow("Role", _userRole),
+                        ],
+                      ),
                     ),
-              ),
-              const SizedBox(height: 16),
-
-              // Action Grid
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.3,
-                children: [
-                  _buildActionCard(
-                    context,
-                    title: "Employees",
-                    subtitle: "View all attendance",
-                    icon: Icons.group,
-                    color: Colors.purple,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EmployeesScreen()),
-                      );
-                    },
                   ),
-                  _buildActionCard(
-                    context,
-                    title: "My Attendance",
-                    subtitle: "Your time records",
-                    icon: Icons.access_time,
-                    color: Colors.blue,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Coming soon!")),
-                      );
-                    },
-                  ),
-                  _buildActionCard(
-                    context,
-                    title: "Payroll",
-                    subtitle: "Salary summary",
-                    icon: Icons.account_balance_wallet,
-                    color: Colors.green,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Payroll module coming soon!")),
-                      );
-                    },
-                  ),
-                  _buildActionCard(
-                    context,
-                    title: "Reports",
-                    subtitle: "Export data",
-                    icon: Icons.bar_chart,
-                    color: Colors.orange,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Reports coming soon!")),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
-              const SizedBox(height: 32),
-
-              // Info Card
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "App Info",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildInfoRow("Version", "1.0.0"),
-                      _buildInfoRow("Database", "Google Sheets"),
-                      _buildInfoRow("Authentication", "Email / Google Sheet"),
-                      _buildInfoRow("User Email", _userEmail.isEmpty ? "-" : _userEmail),
-                      _buildInfoRow("Role", _userRole),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -254,15 +266,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(height: 12),
-              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 13), textAlign: TextAlign.center),
+              Icon(icon, size: 36, color: color),
+              const SizedBox(height: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ],
           ),
         ),
@@ -276,7 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         children: [
           SizedBox(width: 100, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
-          Text(": $value", style: const TextStyle(fontWeight: FontWeight.w600)),
+          Expanded(child: Text(": $value", style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
       ),
     );
