@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/employee.dart';
 import '../services/google_sheet_service.dart';
-import '../widgets/user_attendance_detail_page.dart'; // Now using the beautiful detail page
+import '../widgets/user_attendance_detail_page.dart';
 
 class EmployeesScreen extends StatelessWidget {
   const EmployeesScreen({super.key});
@@ -40,9 +40,9 @@ class EmployeesScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.cloud_off, size: 80, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text("Failed to load data", style: TextStyle(fontSize: 18)),
+                  Icon(Icons.cloud_off, size: 80, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text("Failed to load data", style: TextStyle(fontSize: 18)),
                   Text("Error: ${snapshot.error}", textAlign: TextAlign.center),
                 ],
               ),
@@ -70,12 +70,17 @@ class EmployeesScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final emp = employees[index];
 
-              // Get latest record for OT display
-              final latestRecord = emp.records.isNotEmpty
-                  ? emp.records.reduce((a, b) => a.date.compareTo(b.date) > 0 ? a : b)
-                  : null;
+              // Find the most recent record that has OT > 0
+              String latestOTMinutes = "0";
+              for (var record in emp.records.reversed) {
+                final ot = record.totalOT?.trim();
+                if (ot != null && ot.isNotEmpty && ot != "0") {
+                  latestOTMinutes = ot;
+                  break;
+                }
+              }
 
-              final latestOT = latestRecord?.totalOT?.toString() ?? "0";
+              final bool hasOT = latestOTMinutes != "0";
 
               return Card(
                 elevation: 8,
@@ -145,15 +150,15 @@ class EmployeesScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              latestOT,
+                              latestOTMinutes,
                               style: TextStyle(
-                                fontSize: 28,
+                                fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: latestOT == "0" ? Colors.grey : Colors.green,
+                                color: hasOT ? Colors.green.shade600 : Colors.grey,
                               ),
                             ),
                             Text(
-                              "hrs",
+                              "mins",
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ],

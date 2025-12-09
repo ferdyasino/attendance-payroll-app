@@ -24,23 +24,37 @@ class _UserAttendanceDetailPageState extends State<UserAttendanceDetailPage> {
     futureEmployees = GoogleSheetService().fetchEmployees();
   }
 
-  Color getCardColor(AttendanceRecord record) {
-    if (record.inTime == null && record.outTime == null) {
-      return Colors.red.shade100; // Absent
+  // Smart background color based on attendance
+  Color getCardColor(AttendanceRecord r) {
+    if (r.inTime == null && r.outTime == null) {
+      if (r.shift == "NO SHIFT") return Colors.grey.shade200;
+      return Colors.red.shade100; // Absent / Leave
     }
-    if (record.totalOT != null && record.totalOT > 0) {
+    if (r.totalOT != null && r.totalOT!.trim().isNotEmpty && r.totalOT != "0") {
       return Colors.green.shade100; // Has OT
     }
-    if (record.inTime != null) {
-      return Colors.blue.shade100; // Present
-    }
-    return Colors.grey.shade200;
+    return Colors.blue.shade100; // Regular present
   }
 
-  String getStatusText(AttendanceRecord record) {
-    if (record.inTime == null && record.outTime == null) return "Absent";
-    if (record.totalOT != null && record.totalOT > 0) return "Present + OT";
+  // Smart status chip
+  String getStatus(AttendanceRecord r) {
+    if (r.inTime == null && r.outTime == null) {
+      return r.shift == "NO SHIFT" ? "No Shift" : "Absent";
+    }
+    if (r.totalOT != null && r.totalOT!.trim().isNotEmpty && r.totalOT != "0") {
+      return "Present + OT";
+    }
     return "Present";
+  }
+
+  Color getStatusColor(AttendanceRecord r) {
+    if (r.inTime == null && r.outTime == null) {
+      return r.shift == "NO SHIFT" ? Colors.grey : Colors.red;
+    }
+    if (r.totalOT != null && r.totalOT!.trim().isNotEmpty && r.totalOT != "0") {
+      return Colors.green;
+    }
+    return Colors.blue;
   }
 
   @override
@@ -48,31 +62,52 @@ class _UserAttendanceDetailPageState extends State<UserAttendanceDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "${widget.userName} - Attendance",  // Fixed: was 'userName'
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          widget.userName,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: Colors.deepPurple,
-        elevation: 4,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: FutureBuilder<List<Employee>>(
         future: futureEmployees,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.deepPurple),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 80, color: Colors.red.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Failed to load data",
+                    style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No data found"));
+            return const Center(child: Text("No employees found"));
           }
 
-          final employee = snapshot.data!.firstWhere(
+          final employees = snapshot.data!;
+          final employee = employees.firstWhere(
             (e) => e.fullName.toLowerCase().trim() == widget.userName.toLowerCase().trim(),
             orElse: () => Employee(
-              department: "Not Found",
+              department: "Unknown",
               position: "",
               setup: "",
               fullName: widget.userName,
@@ -81,70 +116,107 @@ class _UserAttendanceDetailPageState extends State<UserAttendanceDetailPage> {
           );
 
           if (employee.records.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_busy, size: 60, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text("No attendance records found", style: TextStyle(fontSize: 18)),
+                  Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    "No records found for ${widget.userName}",
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
                 ],
               ),
             );
           }
 
+          // Sort newest first
           final sortedRecords = List<AttendanceRecord>.from(employee.records)
             ..sort((a, b) => b.date.compareTo(a.date));
 
           return ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
             itemCount: sortedRecords.length,
             itemBuilder: (context, index) {
-              final record = sortedRecords[index];
+              final r = sortedRecords[index];
 
               return Card(
-                elevation: 6,
-                color: getCardColor(record),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                elevation: 8,
+                shadowColor: Colors.deepPurple.withOpacity(0.15),
+                color: getCardColor(r),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header: Date + Status
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "${record.date} (${record.day})",
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            r.date,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                           Chip(
                             label: Text(
-                              getStatusText(record),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                              getStatus(r),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
-                            backgroundColor: getCardColor(record).withOpacity(0.8),
+                            backgroundColor: getStatusColor(r),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                           ),
                         ],
                       ),
-                      const Divider(height: 24),
-                      if (record.shift != null)
-                        _infoRow(Icons.schedule, "Shift", record.shift!),
-                      _infoRow(Icons.login, "Time In", record.inTime ?? "—"),
-                      _infoRow(Icons.logout, "Time Out", record.outTime ?? "—"),
-                      if (record.breakIn != null || record.breakOut != null) ...[
-                        _infoRow(Icons.coffee, "Break In", record.breakIn ?? "—"),
-                        _infoRow(Icons.coffee_outlined, "Break Out", record.breakOut ?? "—"),
-                      ],
-                      if (record.preShiftOT != null)
-                        _infoRow(Icons.access_time, "Pre-OT", "${record.preShiftOT} hrs"),
-                      if (record.postShiftOT != null)
-                        _infoRow(Icons.nights_stay, "Post-OT", "${record.postShiftOT} hrs"),
-                      if (record.totalOT != null && record.totalOT > 0)
-                        _infoRow(Icons.monetization_on, "Total OT", "${record.totalOT} hrs", isHighlight: true),
-                      if (record.approvedBy != null)
-                        _infoRow(Icons.verified_user, "Approved By", record.approvedBy!),
+                      const SizedBox(height: 4),
+                      Text(
+                        r.day,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                      ),
+                      const Divider(height: 30, thickness: 1),
+
+                      // Shift
+                      if (r.shift != null && r.shift!.trim().isNotEmpty)
+                        _buildRow(Icons.schedule, "Shift", r.shift!, Colors.deepPurple),
+
+                      // Time In
+                      _buildRow(
+                        Icons.login,
+                        "Time In",
+                        r.inTime ?? "—",
+                        r.inTime != null ? Colors.green.shade700 : Colors.grey,
+                      ),
+
+                      // Time Out
+                      _buildRow(
+                        Icons.logout,
+                        "Time Out",
+                        r.outTime ?? "—",
+                        r.outTime != null ? Colors.orange.shade700 : Colors.grey,
+                      ),
+
+                      // Total OT
+                      if (r.totalOT != null && r.totalOT!.trim().isNotEmpty && r.totalOT != "0")
+                        _buildRow(
+                          Icons.monetization_on_outlined,
+                          "Total OT",
+                          "${r.totalOT} mins",
+                          Colors.green.shade700,
+                          isBold: true,
+                          fontSize: 18,
+                        ),
+
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -156,23 +228,31 @@ class _UserAttendanceDetailPageState extends State<UserAttendanceDetailPage> {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value, {bool isHighlight = false}) {
+  Widget _buildRow(
+    IconData icon,
+    String label,
+    String value,
+    Color valueColor, {
+    bool isBold = false,
+    double fontSize = 16,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: isHighlight ? Colors.green.shade700 : Colors.grey[700]),
+          Icon(icon, size: 24, color: Colors.deepPurple.shade400),
+          const SizedBox(width: 14),
+          Text("$label:", style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(width: 12),
-          Text("$label:", style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
-                fontSize: isHighlight ? 17 : 15,
-                color: isHighlight ? Colors.green.shade700 : null,
+                fontSize: fontSize,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: valueColor,
               ),
+              textAlign: TextAlign.end,
             ),
           ),
         ],
