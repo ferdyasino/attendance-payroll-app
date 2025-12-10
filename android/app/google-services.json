@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "354644585896",
+    "project_id": "attendancepayrollapp-8c607",
+    "storage_bucket": "attendancepayrollapp-8c607.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:354644585896:android:f6067aa0851f2f0897019d",
+        "android_client_info": {
+          "package_name": "com.company.attendance_payroll_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "354644585896-7dqklmju8rl258upv55t0s19f4tgtoi0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.company.attendance_payroll_app",
+            "certificate_hash": "39dc9dec642721b50b8a5720f65f9ffb462a7254"
+          }
+        },
+        {
+          "client_id": "354644585896-fvle5ccs0ngudpbaq3cm6p84j1ncn01u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.company.attendance_payroll_app",
+            "certificate_hash": "c00304519546c4b108754081ae92c783d547f392"
+          }
+        },
+        {
+          "client_id": "354644585896-akdojpma1emedn9j7a503e6fu7atb8f1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsld0Ca9_-gjNMi3kzj3fgUnWaMRyKh1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "354644585896-akdojpma1emedn9j7a503e6fu7atb8f1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

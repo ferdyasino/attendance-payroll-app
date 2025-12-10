@@ -1,15 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/payroll_provider.dart';
-import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/debug_screen.dart';
-import 'screens/register_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
-void main() async {
+import 'screens/login_screen.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env file
+  try {
+    await dotenv.load(fileName: ".env");
+
+    if (dotenv.env.isEmpty) {
+      print("⚠️ .env failed to load or is empty");
+    } else {
+      print("✅ .env loaded successfully");
+      print("USERS_SHEET_URL: ${dotenv.env['USERS_SHEET_URL']}");
+      print("ATTENDANCE_SHEET_URL: ${dotenv.env['ATTENDANCE_SHEET_URL']}");
+      print("USERS_GID: ${dotenv.env['USERS_GID']}");
+      print("ATTENDANCE_GID: ${dotenv.env['ATTENDANCE_GID']}");
+      print("USERS_SCRIPT_URL: ${dotenv.env['USERS_SCRIPT_URL']}");
+    }
+  } catch (e) {
+    print("❌ Failed to load .env file: $e");
+  }
+
+  // Check if the Google Apps Script URL is accessible
+  final scriptUrl = dotenv.env['USERS_SCRIPT_URL'] ?? '';
+  if (scriptUrl.isEmpty) {
+    print("⚠️ USERS_SCRIPT_URL is not set in .env");
+  } else {
+    try {
+      final response = await http.get(Uri.parse(scriptUrl));
+      if (response.statusCode == 200) {
+        print("✅ USERS_SCRIPT_URL is reachable");
+      } else {
+        print("⚠️ USERS_SCRIPT_URL returned HTTP ${response.statusCode}");
+      }
+    } catch (e) {
+      print("❌ Failed to reach USERS_SCRIPT_URL: $e");
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -18,31 +50,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PayrollProvider()),
-      ],
-      child: MaterialApp(
-        title: 'Attendance & Payroll',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          scaffoldBackgroundColor: Colors.grey[50],
-          appBarTheme: const AppBarTheme(
-            elevation: 0,
-            centerTitle: true,
-            foregroundColor: Colors.white,
-          ),
+    return MaterialApp(
+      title: 'Attendance & Payroll',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.grey[50],
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          foregroundColor: Colors.white,
         ),
-        home: const SplashScreen(),
-        routes: {
-          '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
-          '/dashboard': (context) => const DashboardScreen(),
-          '/debug': (context) => const DebugScreen(),
-        },
       ),
+
+      // Start with LoginScreen
+      home: const LoginScreen(),
+
+      // Centralized routes
+      routes: {
+        AppRoutes.login: (context) => const LoginScreen(),
+        // Dashboard requires parameter, so not added here
+      },
     );
   }
+}
+
+/// Centralized route names
+class AppRoutes {
+  static const String login = '/login';
+  static const String dashboard = '/dashboard';
 }
