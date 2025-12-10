@@ -4,10 +4,11 @@ import '../services/auth_service.dart';
 import 'employees_screen.dart';
 import 'login_screen.dart';
 import 'users_screen.dart';
+import 'departments_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String userEmail; // pass logged-in email
+  final String userEmail;
   const DashboardScreen({super.key, required this.userEmail});
 
   @override
@@ -37,11 +38,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    // Clear saved login
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_email');
 
-    // Navigate back to login screen
     if (context.mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -87,7 +86,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Welcome Card
                   Card(
                     elevation: 8,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -160,7 +158,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Action Grid
                   GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -218,6 +215,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           );
                         },
                       ),
+
+                      // NEW DEPARTMENTS CARD
+                      _buildActionCard(
+                        context,
+                        title: "Departments",
+                        subtitle: "Manage departments",
+                        icon: Icons.apartment,
+                        color: Colors.indigo,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
+                          );
+                        },
+                      ),
+
                       _buildActionCard(
                         context,
                         title: "Users",
