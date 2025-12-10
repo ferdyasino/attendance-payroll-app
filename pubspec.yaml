@@ -15,8 +15,9 @@ dependencies:
   http: ^1.5.0
   intl: ^0.20.2
   shared_preferences: ^2.2.2
+  flutter_dotenv: ^6.0.0
 
-  # Firebase core (for Google Sign-In)
+  # Firebase core (optional if you still want Google Sign-In later)
   firebase_core: ^2.22.0
   google_sign_in: ^6.2.1
 
@@ -31,6 +32,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Optional assets
-  # assets:
-  #   - assets/google_logo.png
+  # Ensure your .env file is included in the app bundle
+  assets:
+    - .env

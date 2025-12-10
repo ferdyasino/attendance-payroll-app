@@ -1,5 +1,7 @@
 // screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/google_sheet_service.dart';
 import 'dashboard_screen.dart';
 
@@ -12,9 +14,39 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-  final TextEditingController _emailController = TextEditingController();
+
   final GoogleSheetService _sheetService = GoogleSheetService();
 
+  late final String devEmail;
+  late final TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Load DEV_EMAIL from dotenv and prefill email field
+    devEmail = dotenv.env['DEV_EMAIL'] ?? '';
+    _emailController = TextEditingController(text: devEmail);
+
+    _prefillSavedEmail(); // only prefill, no auto-login
+  }
+
+  /// ---------------------------------------------------
+  /// PREFILL SAVED EMAIL (NO AUTO LOGIN)
+  /// ---------------------------------------------------
+  Future<void> _prefillSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('user_email');
+
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      print("Prefilling login field with saved email: $savedEmail");
+      _emailController.text = savedEmail;
+    }
+  }
+
+  /// ---------------------------------------------------
+  /// EMAIL LOGIN
+  /// ---------------------------------------------------
   Future<void> _signIn() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -25,43 +57,40 @@ class _LoginScreenState extends State<LoginScreen> {
     bool authorized = false;
 
     try {
-      // Fetch user by email from Google Sheet
       final user = await _sheetService.fetchUserByEmail(email);
 
       if (user != null) {
         final sheetEmail = (user['email'] ?? "").toString().trim().toLowerCase();
-        final role = (user['role'] ?? "USER").toString();
-        print("User found in sheet: email='$sheetEmail', role='$role'");
+        print("User found in sheet: $sheetEmail");
 
-        // Compare input email with sheet email
         authorized = email == sheetEmail;
-        print("Authorization check result: $authorized");
-      } else {
-        print("User not found in Google Sheet.");
-        // Optionally, fetch and print all users for debugging
-        final allUsers = await _sheetService.fetchAllUsers();
-        print("All users in sheet for debugging:");
-        for (var u in allUsers) {
-          print(" - ${u['email']} (role: ${u['role']})");
-        }
       }
     } catch (e) {
-      print("Error fetching user from sheet: $e");
+      print("Error fetching user: $e");
     }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (authorized) {
-      _goToDashboard();
+      // SAVE EMAIL FOR FUTURE CONVENIENCE
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_email', email);
+
+      _goToDashboard(email: email);
     } else {
       _showAccessDenied();
     }
   }
 
-  void _goToDashboard() {
+  /// ---------------------------------------------------
+  /// NAVIGATE TO DASHBOARD
+  /// ---------------------------------------------------
+  void _goToDashboard({required String email}) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      MaterialPageRoute(
+        builder: (_) => DashboardScreen(userEmail: email),
+      ),
     );
   }
 
@@ -75,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Text("Access denied. Your email is not authorized."),
           ],
         ),
-        backgroundColor: Colors.red.shade600,
+        backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -117,10 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'Sign in with your company email',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -154,14 +180,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
               Text(
                 "Only authorized employees can access this app.\nContact HR if you need access.",
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  height: 1.5,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),

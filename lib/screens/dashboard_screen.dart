@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'employees_screen.dart';
 import 'login_screen.dart';
+import 'users_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final String userEmail; // pass logged-in email
+  const DashboardScreen({super.key, required this.userEmail});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -22,8 +25,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadCurrentUser() async {
-    final email = await AuthService.getCurrentUserEmail() ?? '';
-    final role = email.isNotEmpty ? await AuthService.getUserRole(email) : 'USER';
+    final email = widget.userEmail;
+    final role = await AuthService.getUserRole(email);
+
     if (mounted) {
       setState(() {
         _userEmail = email;
@@ -33,7 +37,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    await AuthService.signOut();
+    // Clear saved login
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_email');
+
+    // Navigate back to login screen
     if (context.mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -141,15 +149,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
 
-                  // Quick Actions Title
+                  const SizedBox(height: 24),
                   Text(
                     "Quick Actions",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -211,11 +218,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           );
                         },
                       ),
+                      _buildActionCard(
+                        context,
+                        title: "Users",
+                        subtitle: "Manage roles",
+                        icon: Icons.admin_panel_settings,
+                        color: Colors.red,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const UsersScreen()),
+                          );
+                        },
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
 
-                  // Info Card
+                  const SizedBox(height: 24),
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -241,7 +260,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
                 ],
               ),
             );
