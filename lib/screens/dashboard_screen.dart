@@ -1,4 +1,3 @@
-// screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'employees_screen.dart';
@@ -9,37 +8,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userEmail;
-  const DashboardScreen({super.key, required this.userEmail});
+  final String userRole;
+
+  const DashboardScreen({super.key, required this.userEmail, required this.userRole});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  String _userEmail = '';
-  String _userRole = 'USER';
+  late String _userEmail;
+  late String _userRole;
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    final email = widget.userEmail;
-    final role = await AuthService.getUserRole(email);
-
-    if (mounted) {
-      setState(() {
-        _userEmail = email;
-        _userRole = role;
-      });
-    }
+    _userEmail = widget.userEmail;
+    _userRole = widget.userRole;
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('user_email');
+    await AuthService.logout();
 
     if (context.mounted) {
       Navigator.of(context).pushReplacement(
@@ -79,217 +68,159 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: [Colors.deepPurple, Colors.deepPurple.shade700],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            child: const Icon(Icons.person, size: 36, color: Colors.white),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Welcome back!",
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _userEmail,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _userRole,
-                                    style: const TextStyle(
-                                        color: Colors.white, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  Text(
-                    "Quick Actions",
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1,
-                    children: [
-                      _buildActionCard(
-                        context,
-                        title: "Employees",
-                        subtitle: "View all attendance",
-                        icon: Icons.group,
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const EmployeesScreen()),
-                          );
-                        },
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: "My Attendance",
-                        subtitle: "Your time records",
-                        icon: Icons.access_time,
-                        color: Colors.blue,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Coming soon!")),
-                          );
-                        },
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: "Payroll",
-                        subtitle: "Salary summary",
-                        icon: Icons.account_balance_wallet,
-                        color: Colors.green,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Payroll module coming soon!")),
-                          );
-                        },
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: "Reports",
-                        subtitle: "Export data",
-                        icon: Icons.bar_chart,
-                        color: Colors.orange,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Reports coming soon!")),
-                          );
-                        },
-                      ),
-
-                      // NEW DEPARTMENTS CARD
-                      _buildActionCard(
-                        context,
-                        title: "Departments",
-                        subtitle: "Manage departments",
-                        icon: Icons.apartment,
-                        color: Colors.indigo,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
-                          );
-                        },
-                      ),
-
-                      _buildActionCard(
-                        context,
-                        title: "Users",
-                        subtitle: "Manage roles",
-                        icon: Icons.admin_panel_settings,
-                        color: Colors.red,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const UsersScreen()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "App Info",
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildInfoRow("Version", "1.0.0"),
-                          _buildInfoRow("Database", "Google Sheets"),
-                          _buildInfoRow("Authentication", "Email / Google Sheet"),
-                          _buildInfoRow("User Email", _userEmail.isEmpty ? "-" : _userEmail),
-                          _buildInfoRow("Role", _userRole),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildUserCard(),
+              const SizedBox(height: 24),
+              _buildQuickActions(context),
+              const SizedBox(height: 24),
+              _buildAppInfo(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildUserCard() {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [Colors.deepPurple, Colors.deepPurple.shade700],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: const Icon(Icons.person, size: 36, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Welcome back!",
+                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _userEmail,
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _userRole,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Quick Actions",
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1,
+          children: [
+            _buildActionCard(
+              context,
+              title: "Employees",
+              subtitle: "View all attendance",
+              icon: Icons.group,
+              color: Colors.purple,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmployeesScreen())),
+            ),
+            _buildActionCard(
+              context,
+              title: "My Attendance",
+              subtitle: "Your time records",
+              icon: Icons.access_time,
+              color: Colors.blue,
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Coming soon!"))),
+            ),
+            _buildActionCard(
+              context,
+              title: "Payroll",
+              subtitle: "Salary summary",
+              icon: Icons.account_balance_wallet,
+              color: Colors.green,
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payroll module coming soon!"))),
+            ),
+            _buildActionCard(
+              context,
+              title: "Reports",
+              subtitle: "Export data",
+              icon: Icons.bar_chart,
+              color: Colors.orange,
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reports coming soon!"))),
+            ),
+            _buildActionCard(
+              context,
+              title: "Departments",
+              subtitle: "Manage departments",
+              icon: Icons.apartment,
+              color: Colors.indigo,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DepartmentsScreen())),
+            ),
+            _buildActionCard(
+              context,
+              title: "Users",
+              subtitle: "Manage roles",
+              icon: Icons.admin_panel_settings,
+              color: Colors.red,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UsersScreen())),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(BuildContext context,
+      {required String title,
+      required String subtitle,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -304,22 +235,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icon(icon, size: 36, color: color),
               const SizedBox(height: 8),
               Flexible(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
+                child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               ),
               const SizedBox(height: 4),
               Flexible(
-                child: Text(
-                  subtitle,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
+                child: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12), textAlign: TextAlign.center),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppInfo() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("App Info", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildInfoRow("Version", "1.0.0"),
+            _buildInfoRow("Database", "Google Sheets"),
+            _buildInfoRow("Authentication", "Email / Google Sheet"),
+            _buildInfoRow("User Email", _userEmail),
+            _buildInfoRow("Role", _userRole),
+          ],
         ),
       ),
     );

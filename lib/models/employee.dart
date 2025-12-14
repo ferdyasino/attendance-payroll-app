@@ -1,43 +1,4 @@
-// models/employee.dart
-
-class AttendanceRecord {
-  final String date;        
-  final String day;         
-  final String? shift;      
-
-  final String? inTime;
-  final String? outTime;
-
-  final String? totalOT;    
-
-  const AttendanceRecord({
-    required this.date,
-    required this.day,
-    this.shift,
-    this.inTime,
-    this.outTime,
-    this.totalOT,
-  });
-
-  bool get isPresent => inTime != null || outTime != null;
-
-  bool get isAbsent => inTime == null && outTime == null && shift != "NO SHIFT";
-
-  double get totalOTInHours {
-    if (totalOT == null || totalOT!.trim().isEmpty || totalOT == "0") return 0.0;
-    final cleaned = totalOT!.trim();
-
-    if (cleaned.contains(':')) {
-      final parts = cleaned.split(':');
-      final hours = int.tryParse(parts[0]) ?? 0;
-      final minutes = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-      return hours + (minutes / 60);
-    }
-
-    final minutes = int.tryParse(cleaned) ?? 0;
-    return minutes / 60;
-  }
-}
+import 'attendance_record.dart';
 
 class Employee {
   final String department;
@@ -47,15 +8,20 @@ class Employee {
   final String email;
   final List<AttendanceRecord> records;
 
-  const Employee({
+  /// Bi-monthly planned shifts (key = date "YYYY-MM-DD")
+  final Map<String, String> plannedShifts;
+
+  Employee({
     required this.department,
     required this.position,
     required this.setup,
     required this.fullName,
     required this.email,
     required this.records,
-  });
+    Map<String, String>? plannedShifts,
+  }) : plannedShifts = plannedShifts ?? {};
 
+  /// Latest OT string from records
   String get latestOTMinutes {
     if (records.isEmpty) return "0";
     final withOT = records.where((r) =>
@@ -66,10 +32,12 @@ class Employee {
     return withOT.first.totalOT!;
   }
 
+  /// Total OT in hours
   double get totalOTHours {
     return records.fold(0.0, (sum, r) => sum + r.totalOTInHours);
   }
 
+  /// Total OT in minutes
   int get totalOTMinutes {
     return records.fold(0, (sum, r) {
       if (r.totalOT == null || r.totalOT!.trim().isEmpty) return sum;
@@ -84,5 +52,18 @@ class Employee {
 
       return sum + (int.tryParse(cleaned) ?? 0);
     });
+  }
+
+  /// Set shift only for selected day (does not modify past)
+  void setShiftForDay(String date, String shift) {
+    final today = DateTime.now();
+    final shiftDate = DateTime.parse(date);
+    if (shiftDate.isBefore(today)) return;
+    plannedShifts[date] = shift;
+  }
+
+  /// Get shift for a specific day
+  String getShiftForDay(String date) {
+    return plannedShifts[date] ?? "—";
   }
 }

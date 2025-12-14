@@ -1,6 +1,7 @@
 // screens/user_attendance_detail_page.dart
 import 'package:flutter/material.dart';
 import '../models/employee.dart';
+import '../models/attendance_record.dart';
 import '../services/google_sheet_service.dart';
 
 class UserAttendanceDetailPage extends StatefulWidget {

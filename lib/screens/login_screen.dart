@@ -1,8 +1,8 @@
-// screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../services/google_sheet_service.dart';
+import '../services/auth_service.dart';
+import '../models/user.dart';
 import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,101 +14,139 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-
-  final GoogleSheetService _sheetService = GoogleSheetService();
-
-  late final String devEmail;
   late final TextEditingController _emailController;
+  late final String devEmail;
+  List<User> _allUsers = [];
 
   @override
   void initState() {
     super.initState();
-
-    // Load DEV_EMAIL from dotenv and prefill email field
     devEmail = dotenv.env['DEV_EMAIL'] ?? '';
     _emailController = TextEditingController(text: devEmail);
-
-    _prefillSavedEmail(); // only prefill, no auto-login
+    _prefillSavedEmail();
+    _loadAllUsers();
   }
 
-  /// ---------------------------------------------------
-  /// PREFILL SAVED EMAIL (NO AUTO LOGIN)
-  /// ---------------------------------------------------
   Future<void> _prefillSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedEmail = prefs.getString('user_email');
+    final saved = prefs.getString('user_email');
+    if (saved != null && saved.isNotEmpty) _emailController.text = saved;
+  }
 
-    if (savedEmail != null && savedEmail.isNotEmpty) {
-      print("Prefilling login field with saved email: $savedEmail");
-      _emailController.text = savedEmail;
+  Future<void> _loadAllUsers() async {
+    try {
+      _allUsers = await AuthService.fetchAllUsers();
+    } catch (e) {
+      _showMessage("Failed to load users: $e");
     }
   }
 
-  /// ---------------------------------------------------
-  /// EMAIL LOGIN
-  /// ---------------------------------------------------
   Future<void> _signIn() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     final email = _emailController.text.trim().toLowerCase();
-    print("Attempting login with email: '$email'");
 
-    bool authorized = false;
-
+    // Safely find the user
+    User? user;
     try {
-      final user = await _sheetService.fetchUserByEmail(email);
-
-      if (user != null) {
-        final sheetEmail = (user['email'] ?? "").toString().trim().toLowerCase();
-        print("User found in sheet: $sheetEmail");
-
-        authorized = email == sheetEmail;
-      }
+      user = _allUsers.firstWhere(
+        (u) => u.email.toLowerCase() == email,
+      );
     } catch (e) {
-      print("Error fetching user: $e");
+      user = null; // Not found
     }
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (authorized) {
-      // SAVE EMAIL FOR FUTURE CONVENIENCE
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', email);
-
-      _goToDashboard(email: email);
+    if (user == null) {
+      _showMessage("Email not found or access denied");
+    } else if (user.passwordHash.isEmpty) {
+      // First-time login → set password
+      await _setupPasswordFlow(user);
     } else {
-      _showAccessDenied();
+      // Existing password → login
+      await _passwordLoginFlow(user);
+    }
+
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _setupPasswordFlow(User user) async {
+    String? pass1 = await _promptPassword("Set Password");
+    if (pass1 == null) return;
+
+    String? pass2 = await _promptPassword("Verify Password");
+    if (pass2 == null || pass1 != pass2) {
+      _showMessage("Passwords do not match");
+      return;
+    }
+
+    final res = await AuthService.setupPassword(email: user.email, password: pass1);
+    if (res['success'] == true) {
+      _showMessage("Password setup successful. Logging in...");
+      await _passwordLoginFlow(user, password: pass1);
+    } else {
+      _showMessage(res['message'] ?? "Failed to setup password");
     }
   }
 
-  /// ---------------------------------------------------
-  /// NAVIGATE TO DASHBOARD
-  /// ---------------------------------------------------
-  void _goToDashboard({required String email}) {
+  Future<void> _passwordLoginFlow(User user, {String? password}) async {
+    final pwd = password ?? await _promptPassword("Enter Password");
+    if (pwd == null) return;
+
+    final loginRes = await AuthService.login(user.email, pwd);
+    if (loginRes['success'] == true) {
+      final loggedInUser = loginRes['user'] as User;
+      await AuthService.saveLoginInfo(loggedInUser.email, loggedInUser.role);
+      _goToDashboard(loggedInUser.email, loggedInUser.role);
+    } else {
+      _showMessage(loginRes['message'] ?? "Invalid credentials");
+    }
+  }
+
+  Future<String?> _promptPassword(String title) async {
+    String? pass;
+    await showDialog(
+      context: context,
+      builder: (_) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: ctrl,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: "Password"),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () {
+                pass = ctrl.text.trim();
+                Navigator.pop(context);
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+    if (pass != null && pass!.isEmpty) return null;
+    return pass;
+  }
+
+  void _goToDashboard(String email, String role) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => DashboardScreen(userEmail: email),
-      ),
+      MaterialPageRoute(builder: (_) => DashboardScreen(userEmail: email, userRole: role)),
     );
   }
 
-  void _showAccessDenied() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 12),
-            Text("Access denied. Your email is not authorized."),
-          ],
-        ),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  void _showMessage(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
   }
 
   @override
@@ -117,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -164,16 +202,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: _isLoading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                       )
                     : const Text('Login'),
               ),
