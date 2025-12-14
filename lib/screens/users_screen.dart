@@ -1,7 +1,7 @@
 // screens/users_screen.dart
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
-import '../models/user_model.dart';
+import '../models/user.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -11,7 +11,7 @@ class UsersScreen extends StatefulWidget {
 }
 
 class _UsersScreenState extends State<UsersScreen> {
-  List<AppUser> _users = [];
+  List<User> _users = [];
   bool _isLoading = true;
 
   @override
@@ -77,7 +77,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   // -------------------- Add / Edit User Dialog --------------------
-  void _showUserDialog({AppUser? user}) {
+  void _showUserDialog({User? user}) {
     final fullNameController = TextEditingController(text: user?.fullName ?? '');
     final emailController = TextEditingController(text: user?.email ?? '');
     String _selectedRole = user?.role ?? "USER";

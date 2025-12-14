@@ -2,159 +2,143 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/user_model.dart';
+import '../models/user.dart';
 
 class UserService {
   static String get usersSheetUrl => dotenv.env['USERS_SHEET_URL'] ?? '';
   static String get usersScriptUrl => dotenv.env['USERS_SCRIPT_URL'] ?? '';
 
-  /// -------------------- Fetch all users from Google Sheet --------------------
-  static Future<List<AppUser>> getUsers() async {
+  // -------------------- Fetch all users --------------------
+  static Future<List<User>> getUsers() async {
     final url = usersSheetUrl;
-    if (url.isEmpty) {
-      print("⚠️ USERS_SHEET_URL is not set in .env");
-      return [];
-    }
+    if (url.isEmpty) return [];
 
     try {
       final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) return [];
 
-      if (response.statusCode != 200) {
-        throw Exception("Failed to load users (HTTP ${response.statusCode})");
-      }
-
-      // Remove Google Sheets JSON wrapper
       String jsonString = response.body;
+
       if (jsonString.startsWith('/*O_o*/')) {
         jsonString = jsonString.substring(jsonString.indexOf('{'));
         jsonString = jsonString.substring(0, jsonString.lastIndexOf(')'));
       } else if (jsonString.startsWith('google.visualization.Query.setResponse')) {
-        jsonString = jsonString.substring(jsonString.indexOf('(') + 1, jsonString.lastIndexOf(')'));
+        jsonString =
+            jsonString.substring(jsonString.indexOf('(') + 1, jsonString.lastIndexOf(')'));
       }
 
       final jsonData = jsonDecode(jsonString);
-      final rows = jsonData["table"]["rows"] as List<dynamic>? ?? [];
+      final rows = jsonData['table']['rows'] as List<dynamic>? ?? [];
 
       return rows.map((row) {
-        final cells = row["c"];
-        if (cells == null || cells.length < 3) return null;
+        final c = row['c'];
+        if (c == null || c.length < 3) return null;
 
-        return AppUser(
-          fullName: cells[0]?["v"]?.toString().trim() ?? "",
-          email: cells[1]?["v"]?.toString().trim() ?? "",
-          role: cells[2]?["v"]?.toString().trim().toUpperCase() ?? "USER",
+        return User(
+          fullName: c[0]?['v']?.toString() ?? '',
+          email: c[1]?['v']?.toString() ?? '',
+          role: c[2]?['v']?.toString().toUpperCase() ?? 'USER',
         );
-      }).whereType<AppUser>().toList();
-    } catch (e) {
-      print("UserService getUsers error: $e");
+      }).whereType<User>().toList();
+    } catch (_) {
       return [];
     }
   }
 
-  /// -------------------- Fetch single user by email --------------------
-  static Future<AppUser?> getUserByEmail(String email) async {
+  // -------------------- Get user by email --------------------
+  static Future<User?> getUserByEmail(String email) async {
     final users = await getUsers();
-    return users.firstWhereOrNull((u) => u.email.toLowerCase() == email.toLowerCase());
+    final target = email.trim().toLowerCase();
+    return users.firstWhereOrNull((u) => u.email.toLowerCase() == target);
   }
 
-  /// -------------------- Get only admins --------------------
-  static Future<List<AppUser>> getAdmins() async {
-    final users = await getUsers();
-    return users.where((u) => u.role.toUpperCase() == "ADMIN").toList();
-  }
-
-  /// -------------------- Add a new user --------------------
+  // -------------------- Add user --------------------
   static Future<bool> addUser({
     required String fullName,
     required String email,
-    String role = "USER",
-    bool useJson = false,
-  }) async {
-    return _sendUserRequest(
-      data: {"fullName": fullName, "email": email, "role": role},
-      useJson: useJson,
+    String role = 'USER',
+  }) {
+    return _send(
+      action: 'add',
+      data: {
+        // 🔴 LOWERCASE KEYS (REQUIRED)
+        'fullName': fullName.trim(),
+        'email': email.trim().toLowerCase(),
+        'role': role.trim().toUpperCase(),
+      },
     );
   }
 
-  /// -------------------- Update existing user --------------------
+  // -------------------- Update user --------------------
   static Future<bool> updateUser({
     required String fullName,
     required String email,
     required String role,
-    bool useJson = false,
-  }) async {
-    return _sendUserRequest(
-      data: {"fullName": fullName, "email": email, "role": role},
-      useJson: useJson,
-      action: "update",
+  }) {
+    return _send(
+      action: 'update',
+      data: {
+        // 🔴 LOWERCASE KEYS (REQUIRED)
+        'fullName': fullName.trim(),
+        'email': email.trim().toLowerCase(),
+        'role': role.trim().toUpperCase(),
+      },
     );
   }
 
-  /// -------------------- Delete user --------------------
-  static Future<bool> deleteUser(String email, {bool useJson = false}) async {
-    return _sendUserRequest(
-      data: {"email": email},
-      useJson: useJson,
-      action: "delete",
+  // -------------------- Delete user --------------------
+  static Future<bool> deleteUser(String email) {
+    return _send(
+      action: 'delete',
+      data: {
+        'email': email.trim().toLowerCase(),
+      },
     );
   }
 
-  /// -------------------- Internal helper for POST requests --------------------
-  static Future<bool> _sendUserRequest({
-    required Map<String, dynamic> data,
-    bool useJson = false,
-    String action = "add",
+  // -------------------- POST helper --------------------
+  static Future<bool> _send({
+    required String action,
+    required Map<String, String> data,
   }) async {
-    final scriptUrl = usersScriptUrl;
-    if (scriptUrl.isEmpty) {
-      print("⚠️ USERS_SCRIPT_URL is not set in .env");
-      return false;
-    }
+    final url = usersScriptUrl;
+    if (url.isEmpty) return false;
 
     try {
-      http.Response response;
+      final payload = {
+        ...data,
+        'action': action,
+      };
 
-      // Add action to the payload
-      final payloadData = {...data, "action": action};
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: payload,
+      );
 
-      if (useJson) {
-        final payload = jsonEncode(payloadData);
-        print("Sending JSON POST: $payload");
-
-        response = await http.post(
-          Uri.parse(scriptUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: payload,
-        );
-      } else {
-        final payload = payloadData.map((k, v) => MapEntry(k, v.toString()));
-        print("Sending form-urlencoded POST: $payload");
-
-        response = await http.post(
-          Uri.parse(scriptUrl),
-          headers: {"Content-Type": "application/x-www-form-urlencoded"},
-          body: payload,
-        );
+      if (response.statusCode != 200 && response.statusCode != 302) {
+        return false;
       }
 
-      print("HTTP Status: ${response.statusCode}");
-      print("Response body: ${response.body}");
-
-      // Treat 200 or 302 as success
-      return response.statusCode == 200 || response.statusCode == 302;
-    } catch (e, st) {
-      print("❌ UserService exception: $e");
-      print(st);
+      try {
+        final decoded = jsonDecode(response.body);
+        return decoded is Map && decoded['success'] == true;
+      } catch (_) {
+        return true;
+      }
+    } catch (_) {
       return false;
     }
   }
 }
 
-/// -------------------- Extension to mimic firstWhereOrNull --------------------
+// -------------------- Helper --------------------
 extension FirstWhereOrNullExtension<E> on Iterable<E> {
   E? firstWhereOrNull(bool Function(E) test) {
-    for (var element in this) {
-      if (test(element)) return element;
+    for (final e in this) {
+      if (test(e)) return e;
     }
     return null;
   }
