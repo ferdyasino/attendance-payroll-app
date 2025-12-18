@@ -6,9 +6,11 @@ class Employee {
   final String setup;
   final String fullName;
   final String email;
+
+  /// Attendance records (chronological or fetched order)
   final List<AttendanceRecord> records;
 
-  /// Bi-monthly planned shifts (key = date "YYYY-MM-DD")
+  /// Planned shifts (key = YYYY-MM-DD, value = shift code)
   final Map<String, String> plannedShifts;
 
   Employee({
@@ -17,53 +19,94 @@ class Employee {
     required this.setup,
     required this.fullName,
     required this.email,
-    required this.records,
+    List<AttendanceRecord>? records,
     Map<String, String>? plannedShifts,
-  }) : plannedShifts = plannedShifts ?? {};
+  })  : records = records ?? <AttendanceRecord>[],
+        plannedShifts = plannedShifts ?? <String, String>{};
 
-  /// Latest OT string from records
+  // -------------------- OVERTIME HELPERS --------------------
+
+  /// Latest non-zero OT value (string, raw)
   String get latestOTMinutes {
-    if (records.isEmpty) return "0";
-    final withOT = records.where((r) =>
-        r.totalOT != null &&
-        r.totalOT!.trim().isNotEmpty &&
-        r.totalOT != "0");
-    if (withOT.isEmpty) return "0";
-    return withOT.first.totalOT!;
+    if (records.isEmpty) return '0';
+
+    for (final AttendanceRecord r in records.reversed) {
+      final String? ot = r.totalOT;
+      if (ot != null && ot.trim().isNotEmpty && ot.trim() != '0') {
+        return ot.trim();
+      }
+    }
+    return '0';
   }
 
-  /// Total OT in hours
+  /// Total OT in hours (decimal)
   double get totalOTHours {
-    return records.fold(0.0, (sum, r) => sum + r.totalOTInHours);
+    return records.fold<double>(
+      0.0,
+      (double sum, AttendanceRecord r) => sum + r.totalOTInHours,
+    );
   }
 
-  /// Total OT in minutes
+  /// Total OT in minutes (integer)
   int get totalOTMinutes {
-    return records.fold(0, (sum, r) {
-      if (r.totalOT == null || r.totalOT!.trim().isEmpty) return sum;
-      final cleaned = r.totalOT!.trim();
+    return records.fold<int>(0, (int sum, AttendanceRecord r) {
+      final String? ot = r.totalOT;
+      if (ot == null || ot.trim().isEmpty || ot.trim() == '0') {
+        return sum;
+      }
 
+      final String cleaned = ot.trim();
+
+      // Format: HH:MM
       if (cleaned.contains(':')) {
-        final parts = cleaned.split(':');
-        final hours = int.tryParse(parts[0]) ?? 0;
-        final minutes = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+        final List<String> parts = cleaned.split(':');
+        final int hours = int.tryParse(parts[0]) ?? 0;
+        final int minutes =
+            parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
         return sum + (hours * 60) + minutes;
       }
 
+      // Format: total minutes
       return sum + (int.tryParse(cleaned) ?? 0);
     });
   }
 
-  /// Set shift only for selected day (does not modify past)
+  // -------------------- SHIFT PLANNING --------------------
+
+  /// Set shift for a future or current date only
   void setShiftForDay(String date, String shift) {
-    final today = DateTime.now();
-    final shiftDate = DateTime.parse(date);
+    final DateTime today =
+        DateTime.now().toLocal().subtract(const Duration(
+              hours: 24,
+            ));
+
+    final DateTime shiftDate = DateTime.parse(date);
+
     if (shiftDate.isBefore(today)) return;
+
     plannedShifts[date] = shift;
   }
 
   /// Get shift for a specific day
   String getShiftForDay(String date) {
-    return plannedShifts[date] ?? "—";
+    return plannedShifts[date] ?? '—';
+  }
+
+  // -------------------- FACTORY (OPTIONAL BUT RECOMMENDED) --------------------
+
+  factory Employee.fromJson(
+    Map<String, dynamic> json, {
+    List<AttendanceRecord>? records,
+    Map<String, String>? plannedShifts,
+  }) {
+    return Employee(
+      department: json['department'] ?? '',
+      position: json['position'] ?? '',
+      setup: json['setup'] ?? '',
+      fullName: json['name'] ?? json['fullName'] ?? '',
+      email: json['email'] ?? '',
+      records: records,
+      plannedShifts: plannedShifts,
+    );
   }
 }
