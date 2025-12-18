@@ -1,4 +1,3 @@
-// ==================== FILE: employee_onboarding_service.dart ====================
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -21,9 +20,7 @@ class EmployeeOnboardingService {
       if (res.statusCode != 200) throw Exception('Failed to load employees');
 
       final body = jsonDecode(res.body);
-      if (body['success'] != true) {
-        throw Exception(body['message'] ?? 'Failed to load employees');
-      }
+      if (body['success'] != true) throw Exception(body['message'] ?? 'Failed to load employees');
 
       return List<Map<String, dynamic>>.from(body['data']);
     } catch (e) {
@@ -44,7 +41,9 @@ class EmployeeOnboardingService {
     }
   }
 
-  /// -------------------- ADD / UPDATE EMPLOYEE --------------------
+  /// -------------------- UPSERT EMPLOYEE --------------------
+  /// If employeeId is null → ADD
+  /// If employeeId exists → UPDATE
   static Future<bool> upsertEmployee({
     String? employeeId,
     required String fullName,
@@ -52,11 +51,10 @@ class EmployeeOnboardingService {
     required String department,
     required String position,
     required String setup,
-    required String status,
+    String? status,
   }) async {
     final normalizedStatus = normalizeStatus(status);
-    final existing = await getEmployeeByEmail(email);
-    final isUpdate = existing != null;
+    final isUpdate = employeeId != null && employeeId.isNotEmpty;
 
     try {
       // -------------------- Employee Sheet --------------------
@@ -64,7 +62,7 @@ class EmployeeOnboardingService {
         Uri.parse(_scriptUrl),
         body: {
           'action': isUpdate ? 'update' : 'add',
-          'employeeId': isUpdate ? existing!['employee id'] : '',
+          'employeeId': employeeId ?? '',
           'fullName': fullName,
           'email': email,
           'department': department,
@@ -76,9 +74,13 @@ class EmployeeOnboardingService {
 
       if (res.statusCode != 200 && res.statusCode != 302) return false;
 
-      final body = jsonDecode(res.body);
-      if (body['success'] != true) {
-        print('Employee save warning: ${body['message']}');
+      try {
+        final body = jsonDecode(res.body);
+        if (body['success'] != true) {
+          print('Employee sheet warning: ${body['message']}');
+        }
+      } catch (_) {
+        print('Employee sheet response not JSON, ignored');
       }
 
       // -------------------- Users Sheet --------------------
@@ -96,9 +98,13 @@ class EmployeeOnboardingService {
       if (userRes.statusCode != 200 && userRes.statusCode != 302) {
         print('Warning: Users sheet sync may have failed');
       } else {
-        final userBody = jsonDecode(userRes.body);
-        if (userBody['success'] != true) {
-          print('Users sheet warning: ${userBody['message']}');
+        try {
+          final userBody = jsonDecode(userRes.body);
+          if (userBody['success'] != true) {
+            print('Users sheet warning: ${userBody['message']}');
+          }
+        } catch (_) {
+          print('Users sheet response not JSON, ignored');
         }
       }
 
@@ -109,39 +115,31 @@ class EmployeeOnboardingService {
     }
   }
 
-  /// -------------------- SOFT DELETE --------------------
-  static Future<bool> setInactive(String email) async {
-    final existing = await getEmployeeByEmail(email);
-    if (existing == null) return false;
+  /// -------------------- SOFT DELETE EMPLOYEE --------------------
+  /// Uses employeeId directly for reliability
+  static Future<bool> setInactive(String employeeId) async {
+    if (employeeId.isEmpty) {
+      print('Employee ID is required to deactivate');
+      return false;
+    }
 
-    final empId = existing['employee id'];
     try {
       // -------------------- Employee Sheet --------------------
-      final res = await http.post(Uri.parse(_scriptUrl), body: {
-        'action': 'delete',
-        'employeeId': empId,
-      });
+      final res = await http.post(
+        Uri.parse(_scriptUrl),
+        body: {
+          'action': 'delete',
+          'employeeId': employeeId,
+        },
+      );
+
       if (res.statusCode != 200 && res.statusCode != 302) return false;
 
-      final body = jsonDecode(res.body);
-      if (body['success'] != true) {
-        print('Employee delete warning: ${body['message']}');
-      }
-
-      // -------------------- Users Sheet --------------------
-      final userRes = await http.post(Uri.parse(_usersScriptUrl), body: {
-        'action': 'update',
-        'email': email,
-        'status': 'Inactive',
-      });
-
-      if (userRes.statusCode != 200 && userRes.statusCode != 302) {
-        print('Warning: Users sheet update may have failed');
-      } else {
-        final userBody = jsonDecode(userRes.body);
-        if (userBody['success'] != true) {
-          print('Users sheet warning: ${userBody['message']}');
-        }
+      try {
+        final body = jsonDecode(res.body);
+        if (body['success'] != true) print('Employee delete warning: ${body['message']}');
+      } catch (_) {
+        print('Employee delete response not JSON, ignored');
       }
 
       return true;
