@@ -40,16 +40,23 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
   }
 
   Future<void> _loadDepartments() async {
-    final all = await _departmentService.fetchDepartmentsWithStatus();
-    final current = all.where((d) => d['addedToNewTab'] == true && d['isOldSheet'] == false).toList();
+    final allDepartments = await _departmentService.fetchDepartmentsWithStatus();
+
+    // Only show departments added to new tab and not old sheet
+    final current = allDepartments
+        .where((d) => d['addedToNewTab'] == true && d['isOldSheet'] == false)
+        .toList();
 
     if (!mounted) return;
 
     setState(() {
       _departments = current;
+
+      // Set default selected department if none
       if (_selectedDepartment == null && current.isNotEmpty) {
         _selectedDepartment = current.first;
-        final defaultSetup = current.first['defaultSetup'];
+
+        final defaultSetup = current.first['defaultSetup']?.toString().toUpperCase() ?? 'OFFICE';
         _employeeSetup = _allowedSetups.contains(defaultSetup) ? defaultSetup : 'OFFICE';
       }
     });
@@ -168,7 +175,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                     setState(() {
                       _selectedDepartment = d;
                       if (!_setupManuallyChanged) {
-                        final defaultSetup = d['defaultSetup'];
+                        final defaultSetup = d['defaultSetup']?.toString().toUpperCase() ?? 'OFFICE';
                         _employeeSetup = _allowedSetups.contains(defaultSetup) ? defaultSetup : 'OFFICE';
                       }
                     });
@@ -278,7 +285,6 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                   : () async {
                       Navigator.pop(context);
 
-                      // Immediate feedback
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Importing selected employees...')),
                       );
@@ -296,7 +302,6 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                         if (success) successCount++;
                       }
 
-                      // Critical: Check if still mounted before using context
                       if (!mounted) return;
 
                       await _loadEmployees();
@@ -356,7 +361,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
               _status = 'Active';
               if (_departments.isNotEmpty) {
                 _selectedDepartment = _departments.first;
-                final defaultSetup = _selectedDepartment!['defaultSetup'];
+                final defaultSetup = _selectedDepartment!['defaultSetup']?.toString().toUpperCase() ?? 'OFFICE';
                 _employeeSetup = _allowedSetups.contains(defaultSetup) ? defaultSetup : 'OFFICE';
               }
               _showFormDialog();
