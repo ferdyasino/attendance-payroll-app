@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
 import '../models/user.dart';
+import '../theme/app_colors.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -32,13 +33,12 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
-  // -------------------- Toggle Status (RETURNS BOOL) --------------------
   Future<bool> _toggleStatus(String email, bool activate) async {
     if (email.isEmpty) return false;
     final user = _users.firstWhere((u) => u.email == email);
 
     final success = user.status !=
-        (activate ? "ACTIVE" : "INACTIVE")
+            (activate ? "ACTIVE" : "INACTIVE")
         ? await UserService.updateUser(
             fullName: user.fullName,
             email: user.email,
@@ -47,14 +47,11 @@ class _UsersScreenState extends State<UsersScreen> {
           )
         : false;
 
-    if (success) {
-      await _loadUsers();
-    }
+    if (success) await _loadUsers();
 
     return success;
   }
 
-  // -------------------- Floating Notification --------------------
   void showFloatingNotification(String message, Color color) {
     final overlay = Overlay.of(context);
     if (overlay == null) return;
@@ -99,13 +96,11 @@ class _UsersScreenState extends State<UsersScreen> {
     Future.delayed(const Duration(seconds: 2), entry.remove);
   }
 
-  // -------------------- Add / Edit User Dialog --------------------
   void _showUserDialog({User? user}) {
     final fullNameController =
         TextEditingController(text: user?.fullName ?? '');
     final emailController =
         TextEditingController(text: user?.email ?? '');
-
     String selectedRole = user?.role ?? "USER";
     bool isValid = false;
 
@@ -132,15 +127,25 @@ class _UsersScreenState extends State<UsersScreen> {
             children: [
               TextField(
                 controller: fullNameController,
-                decoration:
-                    const InputDecoration(labelText: "Full Name"),
+                decoration: InputDecoration(
+                  labelText: "Full Name",
+                  labelStyle: TextStyle(color: AppColors.textSecondary),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.primary),
+                  ),
+                ),
                 onChanged: (_) => setState(validate),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emailController,
-                decoration:
-                    const InputDecoration(labelText: "Email"),
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  labelStyle: TextStyle(color: AppColors.textSecondary),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.primary),
+                  ),
+                ),
                 enabled: user == null,
                 onChanged: (_) => setState(validate),
               ),
@@ -151,8 +156,6 @@ class _UsersScreenState extends State<UsersScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
-
-            // -------- DELETE (ACTIVE) / ACTIVATE (INACTIVE) --------
             if (user != null)
               TextButton(
                 onPressed: () async {
@@ -166,14 +169,15 @@ class _UsersScreenState extends State<UsersScreen> {
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(ctx, false),
+                            onPressed: () => Navigator.pop(ctx, false),
                             child: const Text("Cancel"),
                           ),
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(ctx, true),
-                            child: const Text("Delete"),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: Text(
+                              "Delete",
+                              style: TextStyle(color: AppColors.error),
+                            ),
                           ),
                         ],
                       ),
@@ -181,26 +185,24 @@ class _UsersScreenState extends State<UsersScreen> {
 
                     if (confirmed != true) return;
 
-                    final success =
-                        await UserService.deleteUser(user.email);
+                    final success = await UserService.deleteUser(user.email);
 
                     if (success) {
                       Navigator.pop(context);
                       _loadUsers();
                       showFloatingNotification(
                         "User deleted: ${user.fullName}",
-                        Colors.red,
+                        AppColors.error,
                       );
                     }
                   } else {
-                    final success =
-                        await _toggleStatus(user.email, true);
+                    final success = await _toggleStatus(user.email, true);
 
                     if (success) {
                       Navigator.pop(context);
                       showFloatingNotification(
                         "User activated: ${user.fullName}",
-                        Colors.green,
+                        AppColors.success,
                       );
                     }
                   }
@@ -208,36 +210,27 @@ class _UsersScreenState extends State<UsersScreen> {
                 child: Text(
                   isActive ? "Delete" : "Activate",
                   style: TextStyle(
-                    color:
-                        isActive ? Colors.red : Colors.green,
+                    color: isActive ? AppColors.error : AppColors.success,
                   ),
                 ),
               ),
-
-            // -------- ADD / SAVE --------
             ElevatedButton(
               onPressed: isValid
                   ? () async {
-                      final fullName =
-                          fullNameController.text.trim();
-                      final email = emailController.text
-                          .trim()
-                          .toLowerCase();
+                      final fullName = fullNameController.text.trim();
+                      final email = emailController.text.trim().toLowerCase();
 
                       if (user == null) {
-                        final exists =
-                            await UserService.getUserByEmail(
-                                email);
+                        final exists = await UserService.getUserByEmail(email);
                         if (exists != null) {
                           showFloatingNotification(
                             "Email already exists",
-                            Colors.red,
+                            AppColors.error,
                           );
                           return;
                         }
 
-                        final success =
-                            await UserService.addUser(
+                        final success = await UserService.addUser(
                           fullName: fullName,
                           email: email,
                           role: selectedRole,
@@ -248,12 +241,11 @@ class _UsersScreenState extends State<UsersScreen> {
                           _loadUsers();
                           showFloatingNotification(
                             "User added successfully",
-                            Colors.green,
+                            AppColors.success,
                           );
                         }
                       } else {
-                        final success =
-                            await UserService.updateUser(
+                        final success = await UserService.updateUser(
                           fullName: fullName,
                           email: email,
                           role: selectedRole,
@@ -265,7 +257,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           _loadUsers();
                           showFloatingNotification(
                             "User updated successfully",
-                            Colors.green,
+                            AppColors.success,
                           );
                         }
                       }
@@ -281,16 +273,16 @@ class _UsersScreenState extends State<UsersScreen> {
 
   List<User> get _filteredUsers {
     if (_showInactive) return _users;
-    return _users
-        .where((u) => u.status != "INACTIVE")
-        .toList();
+    return _users.where((u) => u.status != "INACTIVE").toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.primary,
         title: const Text("Users"),
         actions: [
           PopupMenuButton(
@@ -306,6 +298,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         setState(() => _showInactive = v);
                         Navigator.pop(context);
                       },
+                      activeColor: AppColors.primary,
                     ),
                   ],
                 ),
@@ -317,29 +310,32 @@ class _UsersScreenState extends State<UsersScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _filteredUsers.isEmpty
-              ? const Center(child: Text("No users found."))
+              ? Center(
+                  child: Text(
+                    "No users found.",
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                )
               : ListView.builder(
                   itemCount: _filteredUsers.length,
                   itemBuilder: (_, index) {
                     final user = _filteredUsers[index];
-                    final inactive =
-                        user.status == "INACTIVE";
+                    final inactive = user.status == "INACTIVE";
 
                     return Card(
-                      color:
-                          inactive ? Colors.red[300] : null,
+                      color: inactive ? AppColors.error.withOpacity(0.3) : null,
                       child: ListTile(
                         title: Text(user.fullName),
                         subtitle: Text(
                           "${user.email} • ${user.role} • ${user.status}",
                         ),
-                        onTap: () =>
-                            _showUserDialog(user: user),
+                        onTap: () => _showUserDialog(user: user),
                       ),
                     );
                   },
                 ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
         onPressed: () => _showUserDialog(),
         child: const Icon(Icons.add),
       ),

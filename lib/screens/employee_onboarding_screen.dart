@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/employee_onboarding_service.dart';
 import '../services/department_service.dart';
+import '../theme/app_colors.dart';
 
 class EmployeeOnboardingScreen extends StatefulWidget {
   const EmployeeOnboardingScreen({super.key});
@@ -108,7 +109,9 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDepartment == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a department')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a department'), backgroundColor: AppColors.error),
+      );
       return;
     }
 
@@ -126,11 +129,16 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
       await _loadEmployees();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_editingId == null ? 'Employee added' : 'Employee updated')),
+        SnackBar(
+          content: Text(_editingId == null ? 'Employee added' : 'Employee updated'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+      );
     }
   }
 
@@ -155,11 +163,16 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
       await _loadEmployees();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Employee ${activate ? 'activated' : 'deleted'} successfully')),
+        SnackBar(
+          content: Text('Employee ${activate ? 'activated' : 'deleted'} successfully'),
+          backgroundColor: activate ? AppColors.success : AppColors.error,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+      );
     }
   }
 
@@ -177,13 +190,19 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                 children: [
                   TextFormField(
                     controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Full Name'),
+                    decoration: InputDecoration(
+                      labelText: 'Full Name',
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+                    ),
                     validator: (v) => v?.trim().isEmpty ?? true ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _emailCtrl,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+                    ),
                     readOnly: _editingId != null,
                     validator: (v) => v?.trim().isEmpty ?? true ? 'Required' : null,
                   ),
@@ -204,10 +223,10 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                         }
                       });
                     },
-                    decoration: const InputDecoration(labelText: 'Department'),
+                    decoration: InputDecoration(labelText: 'Department'),
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(controller: _positionCtrl, decoration: const InputDecoration(labelText: 'Position')),
+                  TextFormField(controller: _positionCtrl, decoration: InputDecoration(labelText: 'Position')),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: _employeeSetup,
@@ -220,7 +239,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                         _setupManuallyChanged = true;
                       });
                     },
-                    decoration: const InputDecoration(labelText: 'Setup'),
+                    decoration: InputDecoration(labelText: 'Setup'),
                   ),
                 ],
               ),
@@ -230,9 +249,16 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             if (_editingId != null)
               TextButton(
-                  onPressed: () => _toggleStatus(_editingId!, _status == 'Inactive'),
-                  child: Text(_status == 'Inactive' ? 'Activate' : 'Delete', style: TextStyle(color: _status == 'Inactive' ? Colors.green : Colors.red))),
-            ElevatedButton(onPressed: _submitForm, child: Text(_editingId == null ? 'Add' : 'Update')),
+                onPressed: () => _toggleStatus(_editingId!, _status == 'Inactive'),
+                child: Text(
+                  _status == 'Inactive' ? 'Activate' : 'Delete',
+                  style: TextStyle(color: _status == 'Inactive' ? AppColors.success : AppColors.error),
+                ),
+              ),
+            ElevatedButton(
+              onPressed: _submitForm,
+              child: Text(_editingId == null ? 'Add' : 'Update'),
+            ),
           ],
         ),
       ),
@@ -248,7 +274,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.primary,
         title: const Text('Employee Onboarding', style: TextStyle(fontSize: 20)),
         actions: [
           PopupMenuButton(
@@ -263,9 +289,9 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                       value: _showInactive,
                       onChanged: (val) {
                         setState(() => _showInactive = val);
-                        Navigator.pop(context); // close menu
+                        Navigator.pop(context);
                       },
-                      activeColor: Colors.blue,
+                      activeColor: AppColors.primary,
                     ),
                   ],
                 ),
@@ -277,7 +303,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _filteredEmployees.isEmpty
-              ? const Center(child: Text('No employees found'))
+              ? Center(child: Text('No employees found', style: TextStyle(color: AppColors.textSecondary)))
               : ListView.builder(
                   itemCount: _filteredEmployees.length,
                   itemBuilder: (_, i) {
@@ -287,7 +313,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                     return GestureDetector(
                       onTap: () => _startEditing(emp),
                       child: Card(
-                        color: isInactive ? Colors.red[300] : null,
+                        color: isInactive ? AppColors.error.withOpacity(0.3) : null,
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         child: ListTile(
                           title: Text(emp['full name'] ?? 'No Name'),
@@ -302,6 +328,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
         children: [
           FloatingActionButton.extended(
             heroTag: 'add',
+            backgroundColor: AppColors.primary,
             onPressed: () {
               _editingId = null;
               _nameCtrl.clear();
@@ -322,6 +349,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
           const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'import',
+            backgroundColor: AppColors.primary,
             onPressed: _showImportDialog,
             icon: const Icon(Icons.download),
             label: const Text('Import Employees'),
@@ -331,11 +359,11 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
     );
   }
 
-  // Import dialog remains unchanged
+  // Import dialog remains unchanged but uses theme colors
   Future<void> _showImportDialog() async {
     if (_employeesFromOldAttendance.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No employees found in attendance sheet for import')),
+        SnackBar(content: const Text('No employees found in attendance sheet for import'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -367,7 +395,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                   subtitle: Text(subtitleParts),
                   trailing: Icon(
                     isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                    color: isSelected ? Colors.green : null,
+                    color: isSelected ? AppColors.success : null,
                   ),
                   onTap: () {
                     setState(() {
@@ -386,7 +414,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                   : () async {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Importing selected employees...')),
+                        SnackBar(content: const Text('Importing selected employees...'), backgroundColor: AppColors.primary),
                       );
 
                       int successCount = 0;
@@ -409,7 +437,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('$successCount employee(s) imported successfully'),
-                          backgroundColor: successCount > 0 ? Colors.green : Colors.orange,
+                          backgroundColor: successCount > 0 ? AppColors.success : AppColors.warning,
                         ),
                       );
                     },

@@ -6,6 +6,7 @@ import 'employee_onboarding_screen.dart';
 import 'login_screen.dart';
 import 'users_screen.dart';
 import 'departments_screen.dart';
+import '../theme/app_colors.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userEmail;
@@ -42,22 +43,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Dashboard'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.appBarTheme.foregroundColor,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') _handleLogout();
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'logout',
                 child: Row(
-                  children: [
+                  children: const [
                     Icon(Icons.logout, color: Colors.red),
                     SizedBox(width: 12),
                     Text('Logout'),
@@ -74,11 +76,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildUserCard(),
+              _buildUserCard(theme),
               const SizedBox(height: 24),
-              _buildQuickActions(),
+              _buildQuickActions(theme),
               const SizedBox(height: 24),
-              _buildAppInfo(),
+              _buildAppInfo(theme),
             ],
           ),
         ),
@@ -88,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ================= UI SECTIONS =================
 
-  Widget _buildUserCard() {
+  Widget _buildUserCard(ThemeData theme) {
     return Card(
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -97,24 +99,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.deepPurple, Colors.deepPurple.shade700],
+            colors: [AppColors.primary, AppColors.secondary],
           ),
         ),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 30,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.person, size: 36, color: Colors.white),
+              backgroundColor: AppColors.surface.withOpacity(0.24),
+              child: const Icon(Icons.person, size: 36, color: Colors.white),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     "Welcome back!",
-                    style: TextStyle(color: Colors.white70),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -146,15 +148,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Quick Actions",
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -168,7 +170,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: "Employees",
               subtitle: "View employees",
               icon: Icons.group,
-              color: Colors.purple,
+              color: AppColors.primary,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const EmployeesScreen()),
@@ -178,7 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: "My Attendance",
               subtitle: "Time records",
               icon: Icons.access_time,
-              color: Colors.blue,
+              color: AppColors.secondary,
               onTap: () => _comingSoon(),
             ),
             _actionCard(
@@ -199,7 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: "Departments",
               subtitle: "Manage departments",
               icon: Icons.apartment,
-              color: Colors.indigo,
+              color: AppColors.primary.withOpacity(0.8),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
@@ -253,9 +255,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Icon(icon, size: 36, color: color),
               const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+              Text(subtitle,
+                  textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
             ],
           ),
         ),
@@ -263,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAppInfo() {
+  Widget _buildAppInfo(ThemeData theme) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -271,7 +276,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("App Info", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text("App Info",
+                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             _infoRow("Version", "1.0.0"),
             _infoRow("Database", "Google Sheets"),
