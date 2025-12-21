@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/shift_service.dart';
+import '../services/employee_onboarding_service.dart';
 import '../models/shift.dart';
 import '../models/shift_type.dart';
 import '../theme/app_colors.dart';
@@ -16,8 +17,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
 
   List<Shift> _schedules = [];
   List<ShiftType> _shiftTypes = [];
+  List<Map<String, dynamic>> _employees = [];
   bool _isLoading = true;
-  String _debugMessage = '';
 
   @override
   void initState() {
@@ -27,95 +28,103 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
   }
 
   Future<void> _loadAll() async {
-    setState(() {
-      _isLoading = true;
-      _debugMessage = 'Loading schedules and shift types...';
-    });
-
+    setState(() => _isLoading = true);
     try {
-      final schedules = await ShiftService.getSchedules();
-      final shiftTypes = await ShiftService.getShiftTypes();
-
-      setState(() {
-        _schedules = schedules;
-        _shiftTypes = shiftTypes;
-        _debugMessage =
-            'Loaded ${_schedules.length} schedules, ${_shiftTypes.length} shift types';
-      });
-    } catch (e, st) {
-      debugPrint('LOAD ERROR: $e\n$st');
-      setState(() {
-        _debugMessage = 'ERROR: $e';
-        _schedules = [];
-        _shiftTypes = [];
-      });
+      _employees = await EmployeeOnboardingService.getAllEmployees();
+      _schedules = await ShiftService.getSchedules();
+      _shiftTypes = await ShiftService.getShiftTypes();
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+      _employees = [];
+      _schedules = [];
+      _shiftTypes = [];
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  /// ------------------ Add New Schedule Dialog ------------------
-  void _showAddScheduleDialog() {
-    String? selectedEmail;
-    String? selectedShiftName;
+  void _showEmployeeSchedulesDialog(Map<String, dynamic> emp) {
+    final empEmail = (emp['email'] ?? '').toString();
+    final empName = (emp['full name'] ?? 'No Name').toString();
+    final empSchedules = _schedules.where((s) => s.email == empEmail).toList();
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(empName),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: empSchedules.isEmpty
+                ? const Text('No schedules assigned')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: empSchedules.length,
+                    itemBuilder: (_, i) {
+                      final s = empSchedules[i];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          title: Text(s.baseShift),
+                          subtitle: Text('${s.cycleStart.split('T')[0]} → ${s.cycleEnd.split('T')[0]}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              await ShiftService.postShiftAction('delete', {
+                                'email': empEmail,
+                                'baseShift': s.baseShift,
+                              });
+                              setState(() => empSchedules.removeAt(i));
+                              await _loadAll();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            ElevatedButton(
+              onPressed: () => _showAddScheduleDialog(emp),
+              child: const Text('Add Schedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddScheduleDialog(Map<String, dynamic> employee) {
+    String? selectedShift;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Add New Schedule'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Employee Email'),
-                value: selectedEmail,
-                items: _schedules.map((s) {
-                  return DropdownMenuItem(
-                    value: s.email,
-                    child: Text(s.email),
-                  );
-                }).toList(),
-                onChanged: (v) => setState(() => selectedEmail = v),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Base Shift'),
-                value: selectedShiftName,
-                items: _shiftTypes.map((s) {
-                  return DropdownMenuItem(
-                    value: s.shiftName,
-                    child: Text(s.shiftName),
-                  );
-                }).toList(),
-                onChanged: (v) => setState(() => selectedShiftName = v),
-              ),
-            ],
+          title: Text('Add Schedule for ${(employee['full name'] ?? 'No Name')}'),
+          content: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(labelText: 'Select Shift'),
+            items: _shiftTypes
+                .map((s) => DropdownMenuItem(value: s.shiftName, child: Text(s.shiftName)))
+                .toList(),
+            onChanged: (v) => setState(() => selectedShift = v),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: (selectedEmail != null && selectedShiftName != null)
-                  ? () async {
-                      final success = await ShiftService.postShiftAction('add', {
-                        'email': selectedEmail!,
-                        'baseShift': selectedShiftName!,
+              onPressed: selectedShift == null
+                  ? null
+                  : () async {
+                      await ShiftService.postShiftAction('add', {
+                        'email': (employee['email'] ?? '').toString(),
+                        'baseShift': selectedShift!,
                         'cycleStart': DateTime.now().toIso8601String(),
                       });
-
-                      if (success) {
-                        Navigator.pop(context);
-                        _loadAll();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Failed to add schedule')),
-                        );
-                      }
-                    }
-                  : null,
+                      Navigator.pop(context);
+                      await _loadAll();
+                      _showEmployeeSchedulesDialog(employee);
+                    },
               child: const Text('Save'),
             ),
           ],
@@ -124,66 +133,64 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildSchedulesTable() {
-    if (_schedules.isEmpty) {
-      return const Center(child: Text('NO SCHEDULE DATA RETURNED'));
-    }
+  Widget _buildEmployeeCards() {
+    if (_employees.isEmpty) return const Center(child: Text('No employees found'));
 
     return RefreshIndicator(
       onRefresh: _loadAll,
-      child: ListView(
-        padding: const EdgeInsets.all(8),
-        children: [
-          DataTable(
-            columns: const [
-              DataColumn(label: Text('Email')),
-              DataColumn(label: Text('Base Shift')),
-              DataColumn(label: Text('Cycle Start')),
-              DataColumn(label: Text('Cycle End')),
-              DataColumn(label: Text('Schedule JSON')),
-              DataColumn(label: Text('Reason')),
-            ],
-            rows: _schedules.map((s) {
-              return DataRow(cells: [
-                DataCell(Text(s.email)),
-                DataCell(Text(s.baseShift)),
-                DataCell(Text(s.cycleStart.split('T')[0])),
-                DataCell(Text(s.cycleEnd.split('T')[0])),
-                DataCell(Text(s.schedule.toJson().toString())),
-                DataCell(const Text('Initial')),
-              ]);
-            }).toList(),
-          ),
-        ],
+      child: ListView.builder(
+        itemCount: _employees.length,
+        itemBuilder: (_, i) {
+          final emp = _employees[i];
+          final empEmail = (emp['email'] ?? '').toString();
+          final empName = (emp['full name'] ?? 'No Name').toString();
+          final empSchedules = _schedules.where((s) => s.email == empEmail).toList();
+
+          return GestureDetector(
+            onTap: () => _showEmployeeSchedulesDialog(emp),
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(empName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 6),
+                    Text('${empSchedules.length} schedule(s) assigned'),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildShiftTypesTable() {
-    if (_shiftTypes.isEmpty) {
-      return const Center(child: Text('NO SHIFT TYPES RETURNED'));
-    }
+  Widget _buildShiftTypeCards() {
+    if (_shiftTypes.isEmpty) return const Center(child: Text('No shift types found'));
 
     return RefreshIndicator(
       onRefresh: _loadAll,
-      child: ListView(
-        padding: const EdgeInsets.all(8),
-        children: [
-          DataTable(
-            columns: const [
-              DataColumn(label: Text('Shift Name')),
-              DataColumn(label: Text('Start Time')),
-              DataColumn(label: Text('End Time')),
-            ],
-            rows: _shiftTypes.map((s) {
-              return DataRow(cells: [
-                DataCell(Text(s.shiftName)),
-                DataCell(Text(s.startTime)),
-                DataCell(Text(s.endTime)),
-              ]);
-            }).toList(),
-          ),
-        ],
+      child: ListView.builder(
+        itemCount: _shiftTypes.length,
+        itemBuilder: (_, i) {
+          final s = _shiftTypes[i];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(s.shiftName),
+              subtitle: Text('${s.startTime} → ${s.endTime}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  // TODO: implement edit shift type dialog
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -197,7 +204,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Schedules'),
+            Tab(text: 'Employee Schedules'),
             Tab(text: 'Shift Types'),
           ],
         ),
@@ -207,13 +214,17 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildSchedulesTable(),
-                _buildShiftTypesTable(),
+                _buildEmployeeCards(),
+                _buildShiftTypeCards(),
               ],
             ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
-        onPressed: _showAddScheduleDialog,
+        onPressed: () {
+          if (_tabController.index == 1) {
+            // TODO: show add shift type dialog
+          }
+        },
         child: const Icon(Icons.add),
       ),
     );

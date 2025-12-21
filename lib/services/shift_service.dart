@@ -28,17 +28,20 @@ class ShiftService {
       });
 
       final response = await http.get(uri);
-      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 302) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
 
       final data = jsonDecode(response.body);
-      if (data['success'] == true) {
+      if (data is Map<String, dynamic> && data['success'] == true) {
         final rawList = List<Map<String, dynamic>>.from(data['data']);
         return rawList.map((e) => Shift.fromJson(e)).toList();
       } else {
-        throw Exception(data['message'] ?? 'Unknown error');
+        debugPrint('ShiftService.getSchedules unexpected response: $data');
+        return [];
       }
     } catch (e, st) {
-      print('Error fetching schedules: $e\n$st');
+      debugPrint('Error fetching schedules: $e\n$st');
       return [];
     }
   }
@@ -50,13 +53,15 @@ class ShiftService {
 
     try {
       final uri = Uri.parse(url).replace(queryParameters: {'type': 'shifttypes'});
-
       final response = await http.get(uri);
-      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+
+      if (response.statusCode != 200 && response.statusCode != 302) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
 
       final data = jsonDecode(response.body);
-      if (data['success'] == true) {
-        // GAS returns List<List<dynamic>> like [["DAY","08:00","17:00"], ...]
+
+      if (data is Map<String, dynamic> && data['success'] == true) {
         final rawList = List<List<dynamic>>.from(
           (data['data'] as List).map((e) => List<dynamic>.from(e)),
         );
@@ -69,10 +74,11 @@ class ShiftService {
           );
         }).toList();
       } else {
-        throw Exception(data['message'] ?? 'Unknown error');
+        debugPrint('ShiftService.getShiftTypes unexpected response: $data');
+        return [];
       }
     } catch (e, st) {
-      print('Error fetching shift types: $e\n$st');
+      debugPrint('Error fetching shift types: $e\n$st');
       return [];
     }
   }
@@ -91,12 +97,21 @@ class ShiftService {
         body: jsonEncode(body),
       );
 
-      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 302) {
+        debugPrint('ShiftService.postShiftAction failed: HTTP ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
+        return false;
+      }
 
-      final data = jsonDecode(response.body);
-      return data['success'] == true;
+      try {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      } catch (_) {
+        // If response is not JSON, treat 200 or 302 as success
+        return true;
+      }
     } catch (e, st) {
-      print('Error posting shift action: $e\n$st');
+      debugPrint('Error posting shift action: $e\n$st');
       return false;
     }
   }
