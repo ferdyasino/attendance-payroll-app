@@ -5,6 +5,52 @@ import '../models/shift.dart';
 import '../models/shift_type.dart';
 import '../theme/app_colors.dart';
 
+// -------------------- GROUPING SERVICE --------------------
+class EmployeeGroupingService {
+  /// Group employees by any key, default 'department'
+  static Map<String, List<Map<String, dynamic>>> groupBy(
+      List<Map<String, dynamic>> items, String key) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var item in items) {
+      final groupKey = item[key]?.toString() ?? 'Unknown';
+      grouped.putIfAbsent(groupKey, () => []).add(item);
+    }
+    return grouped;
+  }
+}
+
+// -------------------- REUSABLE GROUPED LIST VIEW --------------------
+class GroupedListView extends StatelessWidget {
+  final Map<String, List<Map<String, dynamic>>> groupedData;
+  final Widget Function(Map<String, dynamic> item) itemBuilder;
+
+  const GroupedListView({
+    super.key,
+    required this.groupedData,
+    required this.itemBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: groupedData.entries.map((entry) {
+        final groupName = entry.key;
+        final items = entry.value;
+
+        return ExpansionTile(
+          title: Text(
+            groupName,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          children: items.map(itemBuilder).toList(),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// -------------------- SHIFTS SCREEN --------------------
 class ShiftsScreen extends StatefulWidget {
   const ShiftsScreen({super.key});
 
@@ -12,7 +58,8 @@ class ShiftsScreen extends StatefulWidget {
   State<ShiftsScreen> createState() => _ShiftsScreenState();
 }
 
-class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderStateMixin {
+class _ShiftsScreenState extends State<ShiftsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   List<Shift> _schedules = [];
@@ -46,51 +93,65 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
   void _showEmployeeSchedulesDialog(Map<String, dynamic> emp) {
     final empEmail = (emp['email'] ?? '').toString();
     final empName = (emp['full name'] ?? 'No Name').toString();
-    final empSchedules = _schedules.where((s) => s.email == empEmail).toList();
+
+    void refreshDialog() {
+      Navigator.pop(context); // close current dialog
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _showEmployeeSchedulesDialog(emp); // reopen with updated data
+      });
+    }
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(empName),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: empSchedules.isEmpty
-                ? const Text('No schedules assigned')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: empSchedules.length,
-                    itemBuilder: (_, i) {
-                      final s = empSchedules[i];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          title: Text(s.baseShift),
-                          subtitle: Text('${s.cycleStart.split('T')[0]} → ${s.cycleEnd.split('T')[0]}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () async {
-                              await ShiftService.postShiftAction('delete', {
-                                'email': empEmail,
-                                'baseShift': s.baseShift,
-                              });
-                              setState(() => empSchedules.removeAt(i));
-                              await _loadAll();
-                            },
+        builder: (context, setState) {
+          final empSchedules =
+              _schedules.where((s) => s.email == empEmail).toList();
+
+          return AlertDialog(
+            title: Text(empName),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: empSchedules.isEmpty
+                  ? const Text('No schedules assigned')
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: empSchedules.length,
+                      itemBuilder: (_, i) {
+                        final s = empSchedules[i];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            title: Text(s.baseShift),
+                            subtitle: Text(
+                                '${s.cycleStart.split('T')[0]} → ${s.cycleEnd.split('T')[0]}'),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                await ShiftService.postShiftAction('delete', {
+                                  'email': empEmail,
+                                  'baseShift': s.baseShift,
+                                });
+                                await _loadAll();
+                                refreshDialog();
+                              },
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-            ElevatedButton(
-              onPressed: () => _showAddScheduleDialog(emp),
-              child: const Text('Add Schedule'),
+                        );
+                      },
+                    ),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close')),
+              ElevatedButton(
+                onPressed: () => _showAddScheduleDialog(emp),
+                child: const Text('Add Schedule'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -106,12 +167,15 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
           content: DropdownButtonFormField<String>(
             decoration: const InputDecoration(labelText: 'Select Shift'),
             items: _shiftTypes
-                .map((s) => DropdownMenuItem(value: s.shiftName, child: Text(s.shiftName)))
+                .map((s) => DropdownMenuItem(
+                    value: s.shiftName, child: Text(s.shiftName)))
                 .toList(),
             onChanged: (v) => setState(() => selectedShift = v),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
             ElevatedButton(
               onPressed: selectedShift == null
                   ? null
@@ -121,9 +185,13 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
                         'baseShift': selectedShift!,
                         'cycleStart': DateTime.now().toIso8601String(),
                       });
-                      Navigator.pop(context);
+
+                      Navigator.pop(context); // close Add dialog
                       await _loadAll();
-                      _showEmployeeSchedulesDialog(employee);
+
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        _showEmployeeSchedulesDialog(employee);
+                      });
                     },
               child: const Text('Save'),
             ),
@@ -133,70 +201,11 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildEmployeeCards() {
-    if (_employees.isEmpty) return const Center(child: Text('No employees found'));
-
-    return RefreshIndicator(
-      onRefresh: _loadAll,
-      child: ListView.builder(
-        itemCount: _employees.length,
-        itemBuilder: (_, i) {
-          final emp = _employees[i];
-          final empEmail = (emp['email'] ?? '').toString();
-          final empName = (emp['full name'] ?? 'No Name').toString();
-          final empSchedules = _schedules.where((s) => s.email == empEmail).toList();
-
-          return GestureDetector(
-            onTap: () => _showEmployeeSchedulesDialog(emp),
-            child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(empName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 6),
-                    Text('${empSchedules.length} schedule(s) assigned'),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildShiftTypeCards() {
-    if (_shiftTypes.isEmpty) return const Center(child: Text('No shift types found'));
-
-    return RefreshIndicator(
-      onRefresh: _loadAll,
-      child: ListView.builder(
-        itemCount: _shiftTypes.length,
-        itemBuilder: (_, i) {
-          final s = _shiftTypes[i];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: ListTile(
-              title: Text(s.shiftName),
-              subtitle: Text('${s.startTime} → ${s.endTime}'),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  // TODO: implement edit shift type dialog
-                },
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final groupedEmployees =
+        EmployeeGroupingService.groupBy(_employees, 'department');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Employee Shifts'),
@@ -214,8 +223,38 @@ class _ShiftsScreenState extends State<ShiftsScreen> with SingleTickerProviderSt
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildEmployeeCards(),
-                _buildShiftTypeCards(),
+                groupedEmployees.isEmpty
+                    ? const Center(child: Text('No employees found'))
+                    : GroupedListView(
+                        groupedData: groupedEmployees,
+                        itemBuilder: (emp) => ListTile(
+                          title: Text(emp['full name'] ?? 'No Name'),
+                          subtitle: Text(emp['email'] ?? ''),
+                          onTap: () => _showEmployeeSchedulesDialog(emp),
+                        ),
+                      ),
+                _shiftTypes.isEmpty
+                    ? const Center(child: Text('No shift types found'))
+                    : ListView.builder(
+                        itemCount: _shiftTypes.length,
+                        itemBuilder: (_, i) {
+                          final s = _shiftTypes[i];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            child: ListTile(
+                              title: Text(s.shiftName),
+                              subtitle: Text('${s.startTime} → ${s.endTime}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () {
+                                  // TODO: implement edit shift type dialog
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ],
             ),
       floatingActionButton: FloatingActionButton(
