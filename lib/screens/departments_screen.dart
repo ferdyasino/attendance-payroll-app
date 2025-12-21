@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/department_service.dart';
+import '../theme/app_colors.dart';
 
 class DepartmentsScreen extends StatefulWidget {
   const DepartmentsScreen({super.key});
@@ -11,21 +12,24 @@ class DepartmentsScreen extends StatefulWidget {
 class _DepartmentsScreenState extends State<DepartmentsScreen> {
   final DepartmentService _service = DepartmentService();
   List<Map<String, dynamic>> _departments = [];
+  bool _isLoading = true; // start with loading
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadDepartments); // silent startup load
+    Future.microtask(_loadDepartments);
   }
 
-  // -------------------- SILENT LOAD --------------------
+  // -------------------- LOAD --------------------
   Future<void> _loadDepartments() async {
-    final fetched = await _service.fetchDepartmentsWithStatus();
-    if (!mounted) return;
-
-    setState(() {
-      _departments = fetched;
-    });
+    setState(() => _isLoading = true);
+    try {
+      final fetched = await _service.fetchDepartmentsWithStatus();
+      if (!mounted) return;
+      setState(() => _departments = fetched);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // -------------------- IMPORT OLD --------------------
@@ -33,28 +37,28 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
     final dept = _departments[index];
     final success = await _service.addDepartment(dept);
 
-    if (success) {
-      _loadDepartments(); // silent refresh
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Department imported to new sheet')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to import department')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Department imported to new sheet'
+            : 'Failed to import department'),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+
+    if (success) _loadDepartments();
   }
 
   // -------------------- ADD / EDIT --------------------
   void _showAddEditDialog({Map<String, dynamic>? department}) {
     final isEditing = department != null;
-    final bool isImported = department?['addedToNewTab'] == true;
+    final isImported = department?['addedToNewTab'] == true;
 
-    final nameController =
+    final nameCtrl =
         TextEditingController(text: department?['departmentName'] ?? '');
-    final headController =
+    final headCtrl =
         TextEditingController(text: department?['departmentHead'] ?? '');
-    final setupController =
+    final setupCtrl =
         TextEditingController(text: department?['defaultSetup'] ?? 'OFFICE');
 
     showDialog(
@@ -66,18 +70,18 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: nameController,
+                controller: nameCtrl,
                 decoration: const InputDecoration(labelText: "Department Name"),
                 readOnly: isImported,
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: headController,
+                controller: headCtrl,
                 decoration: const InputDecoration(labelText: "Department Head"),
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: setupController,
+                controller: setupCtrl,
                 decoration: const InputDecoration(labelText: "Default Setup"),
               ),
             ],
@@ -87,23 +91,22 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
-
             if (isEditing)
               TextButton(
                 onPressed: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
-                    builder: (ctx) => AlertDialog(
+                    builder: (_) => AlertDialog(
                       title: const Text('Delete Department'),
                       content: const Text(
                           'Are you sure you want to delete this department?'),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
+                          onPressed: () => Navigator.pop(_, false),
                           child: const Text('Cancel'),
                         ),
                         TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
+                          onPressed: () => Navigator.pop(_, true),
                           child: const Text('Delete'),
                         ),
                       ],
@@ -113,45 +116,49 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                   if (confirmed != true) return;
 
                   final success = await _service.deleteDepartment(department!);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success
+                          ? 'Department deleted'
+                          : 'Failed to delete department'),
+                      backgroundColor: success ? AppColors.success : AppColors.error,
+                    ),
+                  );
+
                   if (success) {
                     Navigator.pop(context);
-                    _loadDepartments(); // silent refresh
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Department deleted')),
-                    );
+                    _loadDepartments();
                   }
                 },
                 child: const Text('Delete'),
               ),
-
             ElevatedButton(
               onPressed: () async {
                 final payload = {
-                  'departmentName': nameController.text.trim(),
-                  'departmentHead': headController.text.trim(),
-                  'defaultSetup': setupController.text.trim(),
+                  'departmentName': nameCtrl.text.trim(),
+                  'departmentHead': headCtrl.text.trim(),
+                  'defaultSetup': setupCtrl.text.trim(),
                 };
 
                 bool success = false;
-
                 if (isEditing) {
                   success = await _service.updateDepartment(payload);
                 } else {
                   success = await _service.addDepartment(payload);
                 }
 
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? (isEditing ? 'Department updated' : 'Department added')
+                        : 'Operation failed'),
+                    backgroundColor: success ? AppColors.success : AppColors.error,
+                  ),
+                );
+
                 if (success) {
                   Navigator.pop(context);
-                  _loadDepartments(); // silent refresh
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isEditing
-                            ? "Department updated"
-                            : "Department added",
-                      ),
-                    ),
-                  );
+                  _loadDepartments();
                 }
               },
               child: Text(isEditing ? 'Save' : 'Add'),
@@ -165,7 +172,6 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
   // -------------------- DELETE --------------------
   Future<void> _deleteDepartment(int index) async {
     final dept = _departments[index];
-
     if (!(dept['addedToNewTab'] ?? false)) return;
 
     final confirmed = await showDialog<bool>(
@@ -175,11 +181,11 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
         content: const Text('Delete this department from new tab?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(_, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(_, true),
             child: const Text('Delete'),
           ),
         ],
@@ -190,12 +196,14 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
 
     final success = await _service.deleteDepartment(dept);
 
-    if (success) {
-      _loadDepartments(); // silent refresh
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Department deleted')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Department deleted' : 'Failed to delete department'),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+
+    if (success) _loadDepartments();
   }
 
   // -------------------- UI --------------------
@@ -207,59 +215,62 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadDepartments, // silent refresh
+            onPressed: _loadDepartments,
           ),
         ],
       ),
-
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
         onPressed: () => _showAddEditDialog(),
         child: const Icon(Icons.add),
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _departments.isEmpty
+              ? const Center(child: Text('No departments found'))
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: _departments.length,
+                  itemBuilder: (_, index) {
+                    final dept = _departments[index];
+                    final added = dept['addedToNewTab'] ?? false;
 
-      body: RefreshIndicator(
-        onRefresh: _loadDepartments, // pull to refresh
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: _departments.length,
-          itemBuilder: (_, index) {
-            final dept = _departments[index];
-            final added = dept['addedToNewTab'] ?? false;
-
-            return ListTile(
-              leading: !added
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.download_outlined,
-                        color: Colors.orange,
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        leading: !added
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.download_outlined,
+                                  color: AppColors.warning,
+                              ),
+                              onPressed: () => _importDepartment(index),
+                            )
+                          : null,
+                      title: Text(dept['departmentName'] ?? ''),
+                      subtitle: Text(
+                        'Head: ${dept['departmentHead'] ?? ''} • Setup: ${dept['defaultSetup'] ?? ''}',
                       ),
-                      onPressed: () => _importDepartment(index),
-                    )
-                  : null,
-              title: Text(dept['departmentName'] ?? ''),
-              subtitle: Text(
-                'Head: ${dept['departmentHead'] ?? ''} • Setup: ${dept['defaultSetup'] ?? ''}',
-              ),
-              trailing: added
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () =>
-                              _showAddEditDialog(department: dept),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteDepartment(index),
-                        ),
-                      ],
-                    )
-                  : null,
-            );
-          },
-        ),
-      ),
+                      trailing: added
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () =>
+                                      _showAddEditDialog(department: dept),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => _deleteDepartment(index),
+                                ),
+                              ],
+                            )
+                          : null,
+                      )
+                    );
+                  },
+                ),
     );
   }
 }
