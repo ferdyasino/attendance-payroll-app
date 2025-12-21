@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../services/employee_onboarding_service.dart' as onboardingService;
 import 'employees_screen.dart';
 import 'employee_onboarding_screen.dart';
 import 'login_screen.dart';
 import 'users_screen.dart';
 import 'departments_screen.dart';
+import 'shifts_screen.dart';
 import '../theme/app_colors.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -76,8 +76,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildUserCard(theme),
-              const SizedBox(height: 24),
+              // _buildUserCard(theme),
+              // const SizedBox(height: 24),
               _buildQuickActions(theme),
               const SizedBox(height: 24),
               _buildAppInfo(theme),
@@ -90,63 +90,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ================= UI SECTIONS =================
 
-  Widget _buildUserCard(ThemeData theme) {
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
-          ),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: AppColors.surface.withOpacity(0.24),
-              child: const Icon(Icons.person, size: 36, color: Colors.white),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Welcome back!",
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userEmail,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _userRole,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildUserCard(ThemeData theme) {
+  //   return Card(
+  //     elevation: 8,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  //     child: Container(
+  //       padding: const EdgeInsets.all(24),
+  //       decoration: BoxDecoration(
+  //         borderRadius: BorderRadius.circular(20),
+  //         gradient: LinearGradient(
+  //           colors: [AppColors.primary, AppColors.secondary],
+  //         ),
+  //       ),
+  //       child: Row(
+  //         children: [
+  //           CircleAvatar(
+  //             radius: 30,
+  //             backgroundColor: AppColors.surface.withValues(alpha: 0.24),
+  //             child: const Icon(Icons.person, size: 36, color: Colors.white),
+  //           ),
+  //           const SizedBox(width: 16),
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   "Welcome back!",
+  //                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   _userEmail,
+  //                   style: const TextStyle(
+  //                     color: Colors.white,
+  //                     fontSize: 20,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 6),
+  //                 Container(
+  //                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.white24,
+  //                     borderRadius: BorderRadius.circular(20),
+  //                   ),
+  //                   child: Text(
+  //                     _userRole,
+  //                     style: const TextStyle(color: Colors.white),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildQuickActions(ThemeData theme) {
     return Column(
@@ -201,7 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: "Departments",
               subtitle: "Manage departments",
               icon: Icons.apartment,
-              color: AppColors.primary.withOpacity(0.8),
+              color: AppColors.primary.withValues(alpha: 0.8),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
@@ -227,6 +227,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MaterialPageRoute(
                   builder: (_) => const EmployeeOnboardingScreen(),
                 ),
+              ),
+            ),
+            _actionCard(
+              title: "Shifts",
+              subtitle: "Manage shifts",
+              icon: Icons.schedule,
+              color: Colors.purple,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShiftsScreen()),
               ),
             ),
           ],

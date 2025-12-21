@@ -1,62 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
-
 import 'screens/login_screen.dart';
-import 'theme/app_theme.dart'; // 👈 centralized theme reference
+import 'theme/app_theme.dart'; // Centralized theme
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from .env file
-  await _loadEnv();
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
-  // Check critical Google Apps Script URLs
-  await _checkUrl("USERS_SCRIPT_URL", dotenv.env['USERS_SCRIPT_URL'] ?? '');
-  await _checkUrl("ATTENDANCE_SHEET_URL", dotenv.env['ATTENDANCE_SHEET_URL'] ?? '');
-  await _checkUrl("DEPARTMENTS_SCRIPT_URL", dotenv.env['DEPARTMENTS_SCRIPT_URL'] ?? '');
+  // Validate essential URLs
+  _checkEnv();
 
   runApp(const MyApp());
 }
 
-/// Load .env and log results
-Future<void> _loadEnv() async {
-  try {
-    await dotenv.load(fileName: ".env");
+/// Validate that essential environment variables are loaded
+void _checkEnv() {
+  final usersSheetUrl = dotenv.env['USERS_SHEET_URL'] ?? '';
+  final shiftsScriptUrl = dotenv.env['SHIFTS_SCRIPT_URL'] ?? '';
+  final employeesScriptUrl = dotenv.env['EMPLOYEES_SCRIPT_URL'] ?? '';
 
-    if (dotenv.env.isEmpty) {
-      print("⚠️ .env failed to load or is empty");
-    } else {
-      print("✅ .env loaded successfully");
-      print("USERS_SHEET_URL: ${dotenv.env['USERS_SHEET_URL']}");
-      print("ATTENDANCE_SHEET_URL: ${dotenv.env['ATTENDANCE_SHEET_URL']}");
-      print("USERS_GID: ${dotenv.env['USERS_GID']}");
-      print("ATTENDANCE_GID: ${dotenv.env['ATTENDANCE_GID']}");
-      print("USERS_SCRIPT_URL: ${dotenv.env['USERS_SCRIPT_URL']}");
-      print("DEPARTMENTS_SCRIPT_URL: ${dotenv.env['DEPARTMENTS_SCRIPT_URL']}");
-      print("DEV_EMAIL: ${dotenv.env['DEV_EMAIL']}");
-    }
-  } catch (e) {
-    print("❌ Failed to load .env file: $e");
-  }
-}
-
-/// Test if the given URL is reachable
-Future<void> _checkUrl(String name, String url) async {
-  if (url.isEmpty) {
-    print("⚠️ $name is not set in .env");
-    return;
+  if (usersSheetUrl.isEmpty) {
+    print("⚠️ USERS_SHEET_URL is not set in .env");
+  } else {
+    print("✅ USERS_SHEET_URL loaded: $usersSheetUrl");
   }
 
-  try {
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      print("✅ $name is reachable");
-    } else {
-      print("⚠️ $name returned HTTP ${response.statusCode}");
-    }
-  } catch (e) {
-    print("❌ Failed to reach $name: $e");
+  if (shiftsScriptUrl.isEmpty) {
+    print("⚠️ SHIFTS_SCRIPT_URL is not set in .env");
+  } else {
+    print("✅ SHIFTS_SCRIPT_URL loaded: $shiftsScriptUrl");
+  }
+
+  if (employeesScriptUrl.isEmpty) {
+    print("⚠️ EMPLOYEES_SCRIPT_URL is not set in .env");
+  } else {
+    print("✅ EMPLOYEES_SCRIPT_URL loaded: $employeesScriptUrl");
   }
 }
 
@@ -68,15 +48,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Attendance & Payroll',
       debugShowCheckedModeBanner: false,
-
-      // ------------------ CENTRALIZED BLUE THEME ------------------
-      theme: AppTheme.lightTheme,
-      // -----------------------------------------------------------
-
+      theme: AppTheme.lightTheme, // Centralized theme
       home: const LoginScreen(),
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.dashboard: (context) => const LoginScreen(), // placeholder
+        AppRoutes.dashboard: (context) => const LoginScreen(), // Replace with actual dashboard later
       },
     );
   }
