@@ -5,6 +5,7 @@ class User {
   final bool firstLogin;
   final String passwordHash;
   final DateTime? lastLogin;
+  final String status;
 
   User({
     required this.fullName,
@@ -12,6 +13,7 @@ class User {
     required this.role,
     this.firstLogin = false,
     this.passwordHash = '',
+    this.status = '',
     this.lastLogin,
   });
 
@@ -28,10 +30,12 @@ class User {
       lastLoginVal = DateTime.tryParse(json['last_login'].toString());
     }
 
+
     return User(
       fullName: json['fullname'] ?? '',
       email: json['email'] ?? '',
       role: json['role'] ?? 'USER',
+      status: json['status'] ?? '',
       firstLogin: firstLoginVal,
       passwordHash: json['password_hash'] ?? '',
       lastLogin: lastLoginVal,
@@ -43,6 +47,7 @@ class User {
       'fullname': fullName,
       'email': email,
       'role': role,
+      'status': status,
     };
   }
 
@@ -51,6 +56,7 @@ class User {
       'fullname': fullName,
       'email': email,
       'role': role,
+      'status': status,
       'action': 'add',
     };
   }

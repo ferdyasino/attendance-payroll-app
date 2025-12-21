@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'screens/login_screen.dart';
+import 'theme/app_theme.dart'; // 👈 centralized theme reference
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,21 +68,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Attendance & Payroll',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: Colors.grey[50],
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      // Start with LoginScreen
+
+      // ------------------ CENTRALIZED BLUE THEME ------------------
+      theme: AppTheme.lightTheme,
+      // -----------------------------------------------------------
+
       home: const LoginScreen(),
-      // Centralized named routes
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
-        // Dashboard requires parameters, handle via Navigator.pushReplacement
+        AppRoutes.dashboard: (context) => const LoginScreen(), // placeholder
       },
     );
   }

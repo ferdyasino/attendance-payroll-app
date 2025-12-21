@@ -7,7 +7,6 @@ import '../models/user.dart';
 class UserService {
   static String get usersSheetUrl => dotenv.env['USERS_SHEET_URL'] ?? '';
   static String get usersScriptUrl => dotenv.env['USERS_SCRIPT_URL'] ?? '';
-
   // -------------------- Fetch all users --------------------
   static Future<List<User>> getUsers() async {
     final url = usersSheetUrl;
@@ -38,6 +37,7 @@ class UserService {
           fullName: c[0]?['v']?.toString() ?? '',
           email: c[1]?['v']?.toString() ?? '',
           role: c[2]?['v']?.toString().toUpperCase() ?? 'USER',
+          status: c[5]?['v']?.toString() ?? '',
         );
       }).whereType<User>().toList();
     } catch (_) {
@@ -61,7 +61,6 @@ class UserService {
     return _send(
       action: 'add',
       data: {
-        // 🔴 LOWERCASE KEYS (REQUIRED)
         'fullName': fullName.trim(),
         'email': email.trim().toLowerCase(),
         'role': role.trim().toUpperCase(),
@@ -74,14 +73,15 @@ class UserService {
     required String fullName,
     required String email,
     required String role,
+    required String status,
   }) {
     return _send(
       action: 'update',
       data: {
-        // 🔴 LOWERCASE KEYS (REQUIRED)
         'fullName': fullName.trim(),
         'email': email.trim().toLowerCase(),
         'role': role.trim().toUpperCase(),
+        'status': status.trim(),
       },
     );
   }
@@ -89,9 +89,10 @@ class UserService {
   // -------------------- Delete user --------------------
   static Future<bool> deleteUser(String email) {
     return _send(
-      action: 'delete',
+      action: 'update',
       data: {
         'email': email.trim().toLowerCase(),
+        'status': 'INACTIVE',
       },
     );
   }

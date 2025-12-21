@@ -13,6 +13,7 @@ class UsersScreen extends StatefulWidget {
 class _UsersScreenState extends State<UsersScreen> {
   List<User> _users = [];
   bool _isLoading = true;
+  bool _showInactive = true;
 
   @override
   void initState() {
@@ -31,6 +32,28 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
+  // -------------------- Toggle Status (RETURNS BOOL) --------------------
+  Future<bool> _toggleStatus(String email, bool activate) async {
+    if (email.isEmpty) return false;
+    final user = _users.firstWhere((u) => u.email == email);
+
+    final success = user.status !=
+        (activate ? "ACTIVE" : "INACTIVE")
+        ? await UserService.updateUser(
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            status: activate ? "ACTIVE" : "INACTIVE",
+          )
+        : false;
+
+    if (success) {
+      await _loadUsers();
+    }
+
+    return success;
+  }
+
   // -------------------- Floating Notification --------------------
   void showFloatingNotification(String message, Color color) {
     final overlay = Overlay.of(context);
@@ -43,27 +66,29 @@ class _UsersScreenState extends State<UsersScreen> {
         right: 20,
         child: Material(
           color: Colors.transparent,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 300),
-            opacity: 1.0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 16,
+            ),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
               ),
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -71,16 +96,17 @@ class _UsersScreenState extends State<UsersScreen> {
     );
 
     overlay.insert(entry);
-    Future.delayed(const Duration(seconds: 2), () {
-      entry.remove();
-    });
+    Future.delayed(const Duration(seconds: 2), entry.remove);
   }
 
   // -------------------- Add / Edit User Dialog --------------------
   void _showUserDialog({User? user}) {
-    final fullNameController = TextEditingController(text: user?.fullName ?? '');
-    final emailController = TextEditingController(text: user?.email ?? '');
-    String _selectedRole = user?.role ?? "USER";
+    final fullNameController =
+        TextEditingController(text: user?.fullName ?? '');
+    final emailController =
+        TextEditingController(text: user?.email ?? '');
+
+    String selectedRole = user?.role ?? "USER";
     bool isValid = false;
 
     void validate() {
@@ -91,8 +117,10 @@ class _UsersScreenState extends State<UsersScreen> {
       );
       isValid = fullName.split(' ').length >= 2 &&
           emailRegex.hasMatch(email) &&
-          ["USER", "ADMIN"].contains(_selectedRole);
+          ["USER", "ADMIN"].contains(selectedRole);
     }
+
+    final bool isActive = user?.status == "ACTIVE";
 
     showDialog(
       context: context,
@@ -104,33 +132,17 @@ class _UsersScreenState extends State<UsersScreen> {
             children: [
               TextField(
                 controller: fullNameController,
-                decoration: const InputDecoration(labelText: "Full Name"),
+                decoration:
+                    const InputDecoration(labelText: "Full Name"),
                 onChanged: (_) => setState(validate),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-                keyboardType: TextInputType.emailAddress,
-                enabled: user == null, // prevent email change on edit
+                decoration:
+                    const InputDecoration(labelText: "Email"),
+                enabled: user == null,
                 onChanged: (_) => setState(validate),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedRole,
-                items: ["USER", "ADMIN"].map((role) {
-                  return DropdownMenuItem(
-                    value: role,
-                    child: Text(role),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    _selectedRole = val;
-                    setState(validate);
-                  }
-                },
-                decoration: const InputDecoration(labelText: "Role"),
               ),
             ],
           ),
@@ -139,85 +151,122 @@ class _UsersScreenState extends State<UsersScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
+
+            // -------- DELETE (ACTIVE) / ACTIVATE (INACTIVE) --------
             if (user != null)
               TextButton(
                 onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text("Delete User"),
-                      content: const Text("Are you sure you want to delete this user?"),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Delete")),
-                      ],
-                    ),
-                  );
-
-                  if (confirmed != true) return;
-
-                  final success = await UserService.deleteUser(user.email);
-                  if (success) {
-                    Navigator.pop(context);
-                    _loadUsers();
-                    showFloatingNotification(
-                      "User deleted: \"${user.fullName}\" (${user.role})",
-                      Colors.red,
+                  if (isActive) {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text("Delete User"),
+                        content: const Text(
+                          "Are you sure you want to delete this user?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(ctx, false),
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(ctx, true),
+                            child: const Text("Delete"),
+                          ),
+                        ],
+                      ),
                     );
+
+                    if (confirmed != true) return;
+
+                    final success =
+                        await UserService.deleteUser(user.email);
+
+                    if (success) {
+                      Navigator.pop(context);
+                      _loadUsers();
+                      showFloatingNotification(
+                        "User deleted: ${user.fullName}",
+                        Colors.red,
+                      );
+                    }
                   } else {
-                    showFloatingNotification("Failed to delete user", Colors.red);
+                    final success =
+                        await _toggleStatus(user.email, true);
+
+                    if (success) {
+                      Navigator.pop(context);
+                      showFloatingNotification(
+                        "User activated: ${user.fullName}",
+                        Colors.green,
+                      );
+                    }
                   }
                 },
-                child: const Text("Delete"),
+                child: Text(
+                  isActive ? "Delete" : "Activate",
+                  style: TextStyle(
+                    color:
+                        isActive ? Colors.red : Colors.green,
+                  ),
+                ),
               ),
+
+            // -------- ADD / SAVE --------
             ElevatedButton(
               onPressed: isValid
                   ? () async {
-                      final fullName = fullNameController.text.trim();
-                      final email = emailController.text.trim().toLowerCase();
-                      final role = _selectedRole.trim().toUpperCase();
+                      final fullName =
+                          fullNameController.text.trim();
+                      final email = emailController.text
+                          .trim()
+                          .toLowerCase();
 
                       if (user == null) {
-                        // Add new
-                        final existingUser = await UserService.getUserByEmail(email);
-                        if (existingUser != null) {
-                          showFloatingNotification("This email is already registered", Colors.red);
+                        final exists =
+                            await UserService.getUserByEmail(
+                                email);
+                        if (exists != null) {
+                          showFloatingNotification(
+                            "Email already exists",
+                            Colors.red,
+                          );
                           return;
                         }
 
-                        final success = await UserService.addUser(
+                        final success =
+                            await UserService.addUser(
                           fullName: fullName,
                           email: email,
-                          role: role,
-                        );
-
-                        if (success) {
-                          Navigator.pop(context);
-                          _loadUsers();
-                          showFloatingNotification("User added successfully", Colors.green);
-                        } else {
-                          showFloatingNotification("Failed to add user", Colors.red);
-                        }
-                      } else {
-                        // Edit existing
-                        final oldName = user.fullName; // capture old name
-                        final oldRole = user.role;     // capture old role
-
-                        final success = await UserService.updateUser(
-                          fullName: fullName,
-                          email: email,
-                          role: role,
+                          role: selectedRole,
                         );
 
                         if (success) {
                           Navigator.pop(context);
                           _loadUsers();
                           showFloatingNotification(
-                            "User updated: \"$oldName\" → \"$fullName\" ($role)",
+                            "User added successfully",
                             Colors.green,
                           );
-                        } else {
-                          showFloatingNotification("Failed to update user", Colors.red);
+                        }
+                      } else {
+                        final success =
+                            await UserService.updateUser(
+                          fullName: fullName,
+                          email: email,
+                          role: selectedRole,
+                          status: user.status,
+                        );
+
+                        if (success) {
+                          Navigator.pop(context);
+                          _loadUsers();
+                          showFloatingNotification(
+                            "User updated successfully",
+                            Colors.green,
+                          );
                         }
                       }
                     }
@@ -230,26 +279,66 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 
+  List<User> get _filteredUsers {
+    if (_showInactive) return _users;
+    return _users
+        .where((u) => u.status != "INACTIVE")
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Users")),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        title: const Text("Users"),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                child: Row(
+                  children: [
+                    const Text("Show Inactive"),
+                    const Spacer(),
+                    Switch(
+                      value: _showInactive,
+                      onChanged: (v) {
+                        setState(() => _showInactive = v);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _users.length,
-              itemBuilder: (_, index) {
-                final user = _users[index];
-                return ListTile(
-                  title: Text(user.fullName),
-                  subtitle: Text("${user.email} • ${user.role}"),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _showUserDialog(user: user),
-                  ),
-                );
-              },
-            ),
+          : _filteredUsers.isEmpty
+              ? const Center(child: Text("No users found."))
+              : ListView.builder(
+                  itemCount: _filteredUsers.length,
+                  itemBuilder: (_, index) {
+                    final user = _filteredUsers[index];
+                    final inactive =
+                        user.status == "INACTIVE";
+
+                    return Card(
+                      color:
+                          inactive ? Colors.red[300] : null,
+                      child: ListTile(
+                        title: Text(user.fullName),
+                        subtitle: Text(
+                          "${user.email} • ${user.role} • ${user.status}",
+                        ),
+                        onTap: () =>
+                            _showUserDialog(user: user),
+                      ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showUserDialog(),
         child: const Icon(Icons.add),

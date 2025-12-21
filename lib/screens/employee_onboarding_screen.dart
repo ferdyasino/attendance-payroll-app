@@ -11,7 +11,7 @@ class EmployeeOnboardingScreen extends StatefulWidget {
 
 class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
   bool _loading = true;
-  bool _showInactive = false;
+  bool _showInactive = true;
 
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _employeesFromOldAttendance = [];
@@ -231,7 +231,7 @@ class _EmployeeOnboardingScreenState extends State<EmployeeOnboardingScreen> {
             if (_editingId != null)
               TextButton(
                   onPressed: () => _toggleStatus(_editingId!, _status == 'Inactive'),
-                  child: Text(_status == 'Inactive' ? 'Activate' : 'Delete', style: const TextStyle(color: Colors.red))),
+                  child: Text(_status == 'Inactive' ? 'Activate' : 'Delete', style: TextStyle(color: _status == 'Inactive' ? Colors.green : Colors.red))),
             ElevatedButton(onPressed: _submitForm, child: Text(_editingId == null ? 'Add' : 'Update')),
           ],
         ),
