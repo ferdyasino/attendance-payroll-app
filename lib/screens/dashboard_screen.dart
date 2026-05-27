@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import 'employees_screen.dart';
 import 'login_screen.dart';
 import 'my_attendance_screen.dart';
+import 'attendance_screen.dart';
 import 'users_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -231,7 +232,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => MyAttendanceScreen(),
+                              builder: (_) =>
+                                  AttendanceScreen(userEmail: _userEmail),
                             ),
                           );
                         },
