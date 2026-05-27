@@ -15,7 +15,8 @@ class GoogleSheetService {
   // Parse shifts like "9PM-6AM"
   // -------------------------
   Map<String, String?> parseShiftTimes(String? shift) {
-    if (shift == null || shift.trim().isEmpty) return {'start': null, 'end': null};
+    if (shift == null || shift.trim().isEmpty)
+      return {'start': null, 'end': null};
     final regex = RegExp(
       r'(\d{1,2}(?::\d{2})?)\s*(AM|PM)?\s*[-–]\s*(\d{1,2}(?::\d{2})?)\s*(AM|PM)?',
       caseSensitive: false,
@@ -46,7 +47,8 @@ class GoogleSheetService {
 
   String? extractRealTime(String? text) {
     if (text == null || text.trim().isEmpty) return null;
-    final match = RegExp(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', caseSensitive: false).firstMatch(text);
+    final match = RegExp(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', caseSensitive: false)
+        .firstMatch(text);
     return match?.group(1);
   }
 
@@ -65,15 +67,17 @@ class GoogleSheetService {
       if (jsonText.startsWith('/*O_o*/')) {
         jsonText = jsonText.substring(jsonText.indexOf('{'));
         jsonText = jsonText.substring(0, jsonText.lastIndexOf(')'));
-      } else if (jsonText.startsWith('google.visualization.Query.setResponse')) {
-        jsonText = jsonText.substring(jsonText.indexOf('(') + 1, jsonText.lastIndexOf(')'));
+      } else if (jsonText
+          .startsWith('google.visualization.Query.setResponse')) {
+        jsonText = jsonText.substring(
+            jsonText.indexOf('(') + 1, jsonText.lastIndexOf(')'));
       }
 
       final data = jsonDecode(jsonText);
       final rows = data['table']['rows'] as List<dynamic>? ?? [];
       final List<Map<String, String>> users = [];
 
-      for (var row in rows.skip(1)) {
+      for (var row in rows) {
         final email = row['c']?[1]?['v']?.toString().trim() ?? "";
         final role = row['c']?[2]?['v']?.toString().trim() ?? "USER";
         if (email.isNotEmpty) users.add({'email': email, 'role': role});
@@ -88,7 +92,8 @@ class GoogleSheetService {
 
   Future<Map<String, String>?> fetchUserByEmail(String email) async {
     final users = await fetchAllUsers();
-    return users.firstWhereOrNull((u) => u['email']?.toLowerCase() == email.toLowerCase());
+    return users.firstWhereOrNull(
+        (u) => u['email']?.toLowerCase() == email.toLowerCase());
   }
 
   Future<bool> isEmailAllowed(String email) async {
@@ -110,14 +115,17 @@ class GoogleSheetService {
 
     try {
       final response = await http.get(Uri.parse(url));
-      if (response.statusCode != 200) throw Exception('Failed to load attendance');
+      if (response.statusCode != 200)
+        throw Exception('Failed to load attendance');
 
       String jsonText = response.body;
       if (jsonText.startsWith('/*O_o*/')) {
         jsonText = jsonText.substring(jsonText.indexOf('{'));
         jsonText = jsonText.substring(0, jsonText.lastIndexOf(')'));
-      } else if (jsonText.startsWith('google.visualization.Query.setResponse')) {
-        jsonText = jsonText.substring(jsonText.indexOf('(') + 1, jsonText.lastIndexOf(')'));
+      } else if (jsonText
+          .startsWith('google.visualization.Query.setResponse')) {
+        jsonText = jsonText.substring(
+            jsonText.indexOf('(') + 1, jsonText.lastIndexOf(')'));
       }
 
       final Map<String, dynamic> data = jsonDecode(jsonText);
@@ -129,13 +137,55 @@ class GoogleSheetService {
       }
 
       final dayBlocks = <Map<String, dynamic>>[
-        {'date': get(0,4),  'day': get(1,4),  'shift':4,  'in':5,  'out':6,  'tot':13},
-        {'date': get(0,14), 'day': get(1,14), 'shift':14, 'in':15, 'out':16, 'tot':23},
-        {'date': get(0,24), 'day': get(1,24), 'shift':24, 'in':25, 'out':26, 'tot':33},
-        {'date': get(0,34), 'day': get(1,34), 'shift':34, 'in':35, 'out':36, 'tot':43},
-        {'date': get(0,44), 'day': get(1,44), 'shift':44, 'in':45, 'out':46, 'tot':53},
-        {'date': get(0,54), 'day': get(1,54), 'shift':54, 'in':55, 'out':56, 'tot':63},
-        {'date': get(0,64), 'day': get(1,64), 'in':64, 'out':65},
+        {
+          'date': get(0, 4),
+          'day': get(1, 4),
+          'shift': 4,
+          'in': 5,
+          'out': 6,
+          'tot': 13
+        },
+        {
+          'date': get(0, 14),
+          'day': get(1, 14),
+          'shift': 14,
+          'in': 15,
+          'out': 16,
+          'tot': 23
+        },
+        {
+          'date': get(0, 24),
+          'day': get(1, 24),
+          'shift': 24,
+          'in': 25,
+          'out': 26,
+          'tot': 33
+        },
+        {
+          'date': get(0, 34),
+          'day': get(1, 34),
+          'shift': 34,
+          'in': 35,
+          'out': 36,
+          'tot': 43
+        },
+        {
+          'date': get(0, 44),
+          'day': get(1, 44),
+          'shift': 44,
+          'in': 45,
+          'out': 46,
+          'tot': 53
+        },
+        {
+          'date': get(0, 54),
+          'day': get(1, 54),
+          'shift': 54,
+          'in': 55,
+          'out': 56,
+          'tot': 63
+        },
+        {'date': get(0, 64), 'day': get(1, 64), 'in': 64, 'out': 65},
       ].where((b) => b['date'] != null).toList();
 
       final Map<String, Employee> employeeMap = {};
@@ -172,10 +222,16 @@ class GoogleSheetService {
           final date = block['date']?.toString().trim() ?? "";
           final day = block['day']?.toString().trim() ?? "";
 
-          final rawShift = block.containsKey('shift') ? get(r, block['shift'])?.toString() : null;
+          final rawShift = block.containsKey('shift')
+              ? get(r, block['shift'])?.toString()
+              : null;
           final rawIn = get(r, block['in'])?.toString();
-          final rawOut = block.containsKey('out') ? get(r, block['out'])?.toString() : null;
-          final totalOT = block.containsKey('tot') ? get(r, block['tot'])?.toString() : null;
+          final rawOut = block.containsKey('out')
+              ? get(r, block['out'])?.toString()
+              : null;
+          final totalOT = block.containsKey('tot')
+              ? get(r, block['tot'])?.toString()
+              : null;
 
           final shiftTimes = parseShiftTimes(rawShift);
           final String? shiftStart = shiftTimes['start'];
@@ -184,7 +240,9 @@ class GoogleSheetService {
           String? inTime;
           if (rawIn != null) {
             final txt = rawIn.trim();
-            if (txt.contains("ONTIME") || txt == "PRESHIFT" || txt == "LATE-COMMENT") {
+            if (txt.contains("ONTIME") ||
+                txt == "PRESHIFT" ||
+                txt == "LATE-COMMENT") {
               inTime = extractRealTime(txt) ?? shiftStart;
             }
           }
@@ -194,12 +252,17 @@ class GoogleSheetService {
             final txt = rawOut.trim();
             if (txt == "OUT-ONTIME") {
               outTime = shiftEnd;
-            } else if (txt.contains("POSTSHIFT") || txt.contains("EARLY-OUT") || txt.contains("MANAGEMENT")) {
+            } else if (txt.contains("POSTSHIFT") ||
+                txt.contains("EARLY-OUT") ||
+                txt.contains("MANAGEMENT")) {
               outTime = extractRealTime(txt) ?? shiftEnd;
             }
           }
 
-          if (rawShift != null || inTime != null || outTime != null || totalOT != null) {
+          if (rawShift != null ||
+              inTime != null ||
+              outTime != null ||
+              totalOT != null) {
             emp.records.add(AttendanceRecord(
               date: date,
               day: day,
