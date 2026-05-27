@@ -1,15 +1,20 @@
 // screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../services/auth_service.dart';
 import 'employees_screen.dart';
 import 'login_screen.dart';
-import 'users_screen.dart';
 import 'my_attendance_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'users_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String userEmail; // pass logged-in email
-  const DashboardScreen({super.key, required this.userEmail});
+  final String userEmail;
+
+  const DashboardScreen({
+    super.key,
+    required this.userEmail,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -18,6 +23,11 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _userEmail = '';
   String _userRole = 'USER';
+
+  bool get isAdmin {
+    final role = _userRole.toUpperCase();
+    return role == 'ADMIN' || role == 'OWNER';
+  }
 
   @override
   void initState() {
@@ -38,14 +48,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    // Clear saved login
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove('user_email');
 
-    // Navigate back to login screen
     if (context.mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
       );
     }
   }
@@ -63,14 +74,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'logout') _handleLogout(context);
+              if (value == 'logout') {
+                _handleLogout(context);
+              }
             },
             itemBuilder: (_) => [
               const PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red),
+                    Icon(
+                      Icons.logout,
+                      color: Colors.red,
+                    ),
                     SizedBox(width: 12),
                     Text('Logout'),
                   ],
@@ -92,7 +108,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Card(
                     elevation: 8,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -100,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         gradient: LinearGradient(
                           colors: [
                             Colors.deepPurple,
-                            Colors.deepPurple.shade700
+                            Colors.deepPurple.shade700,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -111,8 +128,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           CircleAvatar(
                             radius: 30,
                             backgroundColor: Colors.white.withOpacity(0.2),
-                            child: const Icon(Icons.person,
-                                size: 36, color: Colors.white),
+                            child: const Icon(
+                              Icons.person,
+                              size: 36,
+                              color: Colors.white,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -138,7 +158,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 const SizedBox(height: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 6),
+                                    horizontal: 14,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(20),
@@ -146,8 +168,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: Text(
                                     _userRole,
                                     style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold),
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -159,6 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
 
                   const SizedBox(height: 24),
+
                   Text(
                     "Quick Actions",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -166,6 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: Colors.grey[800],
                         ),
                   ),
+
                   const SizedBox(height: 16),
 
                   // Action Grid
@@ -177,20 +202,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 1,
                     children: [
-                      _buildActionCard(
-                        context,
-                        title: "Employees",
-                        subtitle: "View all attendance",
-                        icon: Icons.group,
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const EmployeesScreen()),
-                          );
-                        },
-                      ),
+                      // Employees (ADMIN / OWNER only)
+                      if (isAdmin)
+                        _buildActionCard(
+                          context,
+                          title: "Employees",
+                          subtitle: "View all attendance",
+                          icon: Icons.group,
+                          color: Colors.purple,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EmployeesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
+                      // Attendance
                       _buildActionCard(
                         context,
                         title: "Attendance",
@@ -201,10 +231,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => MyAttendanceScreen()),
+                              builder: (_) => MyAttendanceScreen(),
+                            ),
                           );
                         },
                       ),
+
+                      // Payroll
                       _buildActionCard(
                         context,
                         title: "Payroll",
@@ -214,10 +247,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text("Payroll module coming soon!")),
+                              content: Text(
+                                "Payroll module coming soon!",
+                              ),
+                            ),
                           );
                         },
                       ),
+
+                      // Reports
                       _buildActionCard(
                         context,
                         title: "Reports",
@@ -227,32 +265,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text("Reports coming soon!")),
+                              content: Text(
+                                "Reports coming soon!",
+                              ),
+                            ),
                           );
                         },
                       ),
-                      _buildActionCard(
-                        context,
-                        title: "Users",
-                        subtitle: "Manage roles",
-                        icon: Icons.admin_panel_settings,
-                        color: Colors.red,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const UsersScreen()),
-                          );
-                        },
-                      ),
+
+                      // Users (ADMIN / OWNER only)
+                      if (isAdmin)
+                        _buildActionCard(
+                          context,
+                          title: "Users",
+                          subtitle: "Manage roles",
+                          icon: Icons.admin_panel_settings,
+                          color: Colors.red,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const UsersScreen(),
+                              ),
+                            );
+                          },
+                        ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
+
+                  // App Info
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -263,15 +311,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           const SizedBox(height: 12),
                           _buildInfoRow("Version", "1.0.0"),
                           _buildInfoRow("Database", "Google Sheets"),
                           _buildInfoRow(
-                              "Authentication", "Email / Google Sheet"),
-                          _buildInfoRow("User Email",
-                              _userEmail.isEmpty ? "-" : _userEmail),
+                            "Authentication",
+                            "Email / Google Sheet",
+                          ),
+                          _buildInfoRow(
+                            "User Email",
+                            _userEmail.isEmpty ? "-" : _userEmail,
+                          ),
                           _buildInfoRow("Role", _userRole),
                         ],
                       ),
@@ -296,7 +350,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return Card(
       elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
@@ -305,13 +361,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 36, color: color),
+              Icon(
+                icon,
+                size: 36,
+                color: color,
+              ),
               const SizedBox(height: 8),
               Flexible(
                 child: Text(
                   title,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -319,7 +381,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Flexible(
                 child: Text(
                   subtitle,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -330,18 +395,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(
+    String label,
+    String value,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           SizedBox(
-              width: 100,
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w500))),
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
           Expanded(
-              child: Text(": $value",
-                  style: const TextStyle(fontWeight: FontWeight.w600))),
+            child: Text(
+              ": $value",
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
