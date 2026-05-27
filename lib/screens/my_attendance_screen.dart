@@ -11,7 +11,7 @@ class MyAttendanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("My Attendance"),
+        title: const Text("Attendance"),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -67,7 +67,8 @@ class MyAttendanceScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_available, size: 80, color: Colors.grey[400]),
+                  Icon(Icons.event_available,
+                      size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     "No attendance records yet",
@@ -94,7 +95,8 @@ class MyAttendanceScreen extends StatelessWidget {
 
               return Card(
                 elevation: 6,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 color: record.isPresent
                     ? (hasOT ? Colors.green.shade50 : Colors.blue.shade50)
                     : Colors.red.shade50,
@@ -102,7 +104,8 @@ class MyAttendanceScreen extends StatelessWidget {
                   contentPadding: const EdgeInsets.all(16),
                   title: Text(
                     "${record.date} • ${record.day}",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 17),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +113,8 @@ class MyAttendanceScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.login, size: 18, color: Colors.green.shade700),
+                          Icon(Icons.login,
+                              size: 18, color: Colors.green.shade700),
                           const SizedBox(width: 8),
                           Text("In: ${record.inTime ?? "—"}"),
                         ],
@@ -118,7 +122,8 @@ class MyAttendanceScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.logout, size: 18, color: Colors.orange.shade700),
+                          Icon(Icons.logout,
+                              size: 18, color: Colors.orange.shade700),
                           const SizedBox(width: 8),
                           Text("Out: ${record.outTime ?? "—"}"),
                         ],
@@ -127,7 +132,8 @@ class MyAttendanceScreen extends StatelessWidget {
                   ),
                   trailing: hasOT
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.green.shade600,
                             borderRadius: BorderRadius.circular(20),
@@ -140,7 +146,9 @@ class MyAttendanceScreen extends StatelessWidget {
                             ),
                           ),
                         )
-                      : (record.isPresent ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.cancel, color: Colors.red)),
+                      : (record.isPresent
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : const Icon(Icons.cancel, color: Colors.red)),
                 ),
               );
             },
