@@ -27,11 +27,15 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+**/GeneratedPluginRegistrant.*
+**/generated_plugin_registrant.*
+**/generated_plugins.cmake
 
 # Symbolication related
 app.*.symbols
@@ -44,29 +48,26 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# VS Code
-.vscode/
-
-# Node / npm
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment files
-.env
+# Environment variables
+*.env
 .env.*
 
-# Local settings
+# Extra Flutter build safety
+/build/
+**/build/
+
+# Android / iOS generated files
+android/.gradle/
+android/local.properties
+ios/Pods/
+ios/.symlinks/
+
+# Secrets / keys
+*.json
+*.key
+*.p12
+
+# VS Code (optional)
+.vscode/
+.vs/
 .idea/
-*.iml
-
-# Logs
-logs/
-*.log
-
-# macOS
-.DS_Store
-
-# Generated files
-pubspec.lock
