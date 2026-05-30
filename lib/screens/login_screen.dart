@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/google_sheet_service.dart';
 import 'dashboard_screen.dart';
+import '../screens/my_attendance_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,7 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = await _sheetService.fetchUserByEmail(email);
 
       if (user != null) {
-        final sheetEmail = (user['email'] ?? "").toString().trim().toLowerCase();
+        final sheetEmail =
+            (user['email'] ?? "").toString().trim().toLowerCase();
         print("User found in sheet: $sheetEmail");
 
         authorized = email == sheetEmail;
@@ -86,10 +88,18 @@ class _LoginScreenState extends State<LoginScreen> {
   /// ---------------------------------------------------
   /// NAVIGATE TO DASHBOARD
   /// ---------------------------------------------------
+  // void _goToDashboard({required String email}) {
+  //   Navigator.of(context).pushReplacement(
+  //     MaterialPageRoute(
+  //       builder: (_) => DashboardScreen(userEmail: email),
+  //     ),
+  //   );
+  // }
+
   void _goToDashboard({required String email}) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => DashboardScreen(userEmail: email),
+        builder: (_) => MyAttendanceScreen(),
       ),
     );
   }
@@ -180,7 +190,8 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
               Text(
                 "Only authorized employees can access this app.\nContact HR if you need access.",
-                style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
+                style: TextStyle(
+                    color: Colors.grey[600], fontSize: 14, height: 1.5),
                 textAlign: TextAlign.center,
               ),
             ],
