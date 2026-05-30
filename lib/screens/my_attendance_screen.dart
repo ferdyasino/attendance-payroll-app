@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/header_section.dart';
 import '../widgets/calendar_section.dart';
+import '../widgets/time_logs_section.dart';
 
 class MyAttendanceScreen extends StatefulWidget {
   const MyAttendanceScreen({super.key});
@@ -10,6 +11,10 @@ class MyAttendanceScreen extends StatefulWidget {
 }
 
 class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
+  final PageController _pageController = PageController();
+
+  int currentPage = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,20 +22,51 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // STEP 2
             const HeaderSection(),
 
-            // STEP 3
-            const CalendarSection(),
+            // PAGE INDICATOR (optional but useful)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _dot(0),
+                  const SizedBox(width: 6),
+                  _dot(1),
+                ],
+              ),
+            ),
 
-            // STEP 4
+            // SWIPEABLE CONTENT
             Expanded(
-              child: Container(
-                color: Colors.transparent,
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    currentPage = index;
+                  });
+                },
+                children: const [
+                  TimeLogsSection(),
+                  CalendarSection(),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _dot(int index) {
+    final isActive = currentPage == index;
+
+    return Container(
+      width: isActive ? 10 : 6,
+      height: 6,
+      decoration: BoxDecoration(
+        color: isActive ? Colors.orange : Colors.grey,
+        borderRadius: BorderRadius.circular(3),
       ),
     );
   }
