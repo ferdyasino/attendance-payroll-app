@@ -18,8 +18,8 @@ dependencies:
   flutter_dotenv: ^6.0.0
 
   # Firebase core (optional if you still want Google Sign-In later)
-  firebase_core: ^2.22.0
-  google_sign_in: ^6.2.1
+  # firebase_core: ^2.22.0
+  # google_sign_in: ^6.2.1
 
   # Optional: state management
   provider: ^6.1.5+1

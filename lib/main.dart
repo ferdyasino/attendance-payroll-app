@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'screens/login_screen.dart';
+import 'screens/my_attendance_screen.dart';
+import 'services/session_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,11 +44,16 @@ Future<void> main() async {
     }
   }
 
-  runApp(const MyApp());
+  // 🔥 NEW: check session BEFORE app starts
+  final savedEmail = await SessionManager.getEmail();
+
+  runApp(MyApp(initialEmail: savedEmail));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialEmail;
+
+  const MyApp({super.key, this.initialEmail});
 
   @override
   Widget build(BuildContext context) {
@@ -63,13 +70,14 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // Start with LoginScreen
-      home: const LoginScreen(),
+      // 🔥 UPDATED: persistent login routing
+      home: initialEmail == null
+          ? const LoginScreen()
+          : MyAttendanceScreen(userEmail: initialEmail!),
 
-      // Centralized routes
+      // Centralized routes (UNCHANGED)
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
-        // Dashboard requires parameter, so not added here
       },
     );
   }
