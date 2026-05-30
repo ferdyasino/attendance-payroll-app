@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/header_section.dart';
 import '../widgets/calendar_section.dart';
 import '../widgets/time_logs_section.dart';
+import '../widgets/admin_dashboard_section.dart';
 
 class MyAttendanceScreen extends StatefulWidget {
   const MyAttendanceScreen({super.key});
@@ -33,6 +34,8 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                   _dot(0),
                   const SizedBox(width: 6),
                   _dot(1),
+                  const SizedBox(width: 6),
+                  _dot(2),
                 ],
               ),
             ),
@@ -49,6 +52,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                 children: const [
                   TimeLogsSection(),
                   CalendarSection(),
+                  AdminDashboardSection(),
                 ],
               ),
             ),
