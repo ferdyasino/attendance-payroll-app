@@ -1,9 +1,9 @@
 // screens/login_screen.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/google_sheet_service.dart';
-import 'dashboard_screen.dart';
+import '../services/session_manager.dart';
+import '../screens/my_attendance_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,35 +24,29 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
 
-    // Load DEV_EMAIL from dotenv and prefill email field
     devEmail = dotenv.env['DEV_EMAIL'] ?? '';
     _emailController = TextEditingController(text: devEmail);
 
-    _prefillSavedEmail(); // only prefill, no auto-login
+    _prefillSavedEmail();
   }
 
-  /// ---------------------------------------------------
   /// PREFILL SAVED EMAIL (NO AUTO LOGIN)
-  /// ---------------------------------------------------
   Future<void> _prefillSavedEmail() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedEmail = prefs.getString('user_email');
+    final savedEmail = await SessionManager.getEmail();
 
     if (savedEmail != null && savedEmail.isNotEmpty) {
-      print("Prefilling login field with saved email: $savedEmail");
+      print("Prefilling login field: $savedEmail");
       _emailController.text = savedEmail;
     }
   }
 
-  /// ---------------------------------------------------
-  /// EMAIL LOGIN
-  /// ---------------------------------------------------
+  /// LOGIN
   Future<void> _signIn() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     final email = _emailController.text.trim().toLowerCase();
-    print("Attempting login with email: '$email'");
+    print("Attempting login: $email");
 
     bool authorized = false;
 
@@ -60,22 +54,21 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = await _sheetService.fetchUserByEmail(email);
 
       if (user != null) {
-        final sheetEmail = (user['email'] ?? "").toString().trim().toLowerCase();
-        print("User found in sheet: $sheetEmail");
+        final sheetEmail =
+            (user['email'] ?? "").toString().trim().toLowerCase();
 
         authorized = email == sheetEmail;
       }
     } catch (e) {
-      print("Error fetching user: $e");
+      print("Login error: $e");
     }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (authorized) {
-      // SAVE EMAIL FOR FUTURE CONVENIENCE
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', email);
+      // SAVE SESSION USING SESSION MANAGER
+      await SessionManager.saveEmail(email);
 
       _goToDashboard(email: email);
     } else {
@@ -83,13 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// ---------------------------------------------------
-  /// NAVIGATE TO DASHBOARD
-  /// ---------------------------------------------------
+  /// NAVIGATE
   void _goToDashboard({required String email}) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => DashboardScreen(userEmail: email),
+        builder: (_) => MyAttendanceScreen(userEmail: email),
       ),
     );
   }
@@ -106,7 +97,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
@@ -165,7 +158,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: _isLoading
@@ -173,14 +167,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5),
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
                       )
                     : const Text('Login'),
               ),
               const SizedBox(height: 40),
               Text(
                 "Only authorized employees can access this app.\nContact HR if you need access.",
-                style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  height: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
